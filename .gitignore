@@ -1,1 +1,6 @@
-scripts/_backups/**.backup
+.idea/*
+
+bin
+
+config/env/*
+!config/env/.env.template

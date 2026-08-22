@@ -1,12 +1,12 @@
-# Administração de sistemas e deployment
-Este repositório consiste em scripts, _tools_ de manutenção, documentação global sobre o quesito físico, monitorização de processos e eventuais automatizações.
+# Sincronizador da base de dados
+<!-- Este repositório consiste em scripts, _tools_ de manutenção, documentação global sobre o quesito físico, monitorização de processos e eventuais automatizações.
 
-![pv](./_docs/svg/pv.svg)
+<!-- ![pv](./_docs/svg/pv.svg) -->
 
 ## Como formar a base de dados de animes
-A base de dados consiste inteiramente de informação open source. Para criar a base de dados existem alguns scripts python e um _Makefile_ na pasta `/scripts`. A informação da base de dados é proveniente do site [MyAnimeList](https://myanimelist.net/), extraída pelo _API_ não oficial [Jikan](https://jikan.moe/).
+A base de dados consiste inteiramente de informação open source. A informação da base de dados é proveniente do site [MyAnimeList](https://myanimelist.net/), extraída pelo antigo _API_ não oficial [Jikan](https://jikan.moe/), novo [Tenrai](https://tenrai.org/).
 
-A formação da base de dados consiste de dois passos:
+<!-- A formação da base de dados consiste de dois passos:
 1. A extração da informação.
 2. O _bootstrapping_ e inserção da informação num ficheiro SQLite.
 
@@ -45,4 +45,4 @@ Alternativamente os _targets_ do _Makefile_ abstraem o processo de passar os par
 
 
 [^1] É possível executar sem o json das relações, estas só nãos erão preenchidas
-[^2] Este target faz um backup antes de reescrever a base de dados, ele também renomeia a base de dados actual (se existir) para \$(TARGET_DB).old e se já houver um \$(TARGET_DB).old ele será apagado.
+[^2] Este target faz um backup antes de reescrever a base de dados, ele também renomeia a base de dados actual (se existir) para \$(TARGET_DB).old e se já houver um \$(TARGET_DB).old ele será apagado. -->
