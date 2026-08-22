@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"os"
 
 	"syncer/src/config"
 	"syncer/src/sync"
@@ -34,9 +35,15 @@ func main() {
 
 	switch *executionMode {
 	case "full":
-		syncer.RunFullSync()
+		if err := syncer.RunFullSync(); err != nil {
+			fmt.Printf("Full sync failed: %v\n", err)
+			os.Exit(1)
+		}
 	case "partial":
-		syncer.RunPartialSync()
+		if err := syncer.RunPartialSync(); err != nil {
+			fmt.Printf("Partial sync failed: %v\n", err)
+			os.Exit(1)
+		}
 	default:
 		fmt.Printf("Unknown execution mode: %s\n", *executionMode)
 	}
