@@ -22,6 +22,200 @@ func NewPersister(db *sql.DB, lookups *Lookups, opts config.Config) *Persister {
 	return &Persister{db: db, lookups: lookups, opts: opts}
 }
 
+func (p *Persister) InsertScrapedManga(ctx context.Context, item scrape.ScrapedManga) error {
+	if item.Error != nil {
+		return fmt.Errorf("skipping manga with scrape error: %w", item.Error)
+	}
+
+	manga := item.Manga
+	if manga.MalId == 0 {
+		return fmt.Errorf("skipping manga without mal_id")
+	}
+	if manga.Title == "" {
+		return fmt.Errorf("skipping manga %d without title", manga.MalId)
+	}
+
+	tx, err := p.db.BeginTx(ctx, nil)
+	if err != nil {
+		return fmt.Errorf("begin tx for manga %d: %w", manga.MalId, err)
+	}
+	defer tx.Rollback()
+
+	if err := p.insertMangaRow(tx, manga); err != nil {
+		return err
+	}
+	if err := p.insertMangaSynonyms(tx, manga); err != nil {
+		return err
+	}
+	if err := p.insertMangaDescription(tx, manga); err != nil {
+		return err
+	}
+	if err := p.insertMangaAuthors(tx, manga); err != nil {
+		return err
+	}
+	if err := p.insertMangaTags(tx, manga); err != nil {
+		return err
+	}
+	if item.Relations != nil {
+		if err := p.insertMangaRelations(tx, manga.MalId, *item.Relations); err != nil {
+			return err
+		}
+	}
+
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit manga %d: %w", manga.MalId, err)
+	}
+	return nil
+}
+
+func (p *Persister) insertMangaRow(tx *sql.Tx, manga jikan.MangaBase) error {
+	_, err := tx.Exec(`
+		INSERT OR REPLACE INTO mangas
+			(id, title, title_english, title_japanese, kind, status,
+			 num_chapters, num_volumes, start_date, end_date,
+			 cover_url_small, cover_url_large)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, manga.MalId, manga.Title, nullIfEmpty(manga.TitleEnglish), nullIfEmpty(manga.TitleJapanese),
+		manga.Type, manga.Status, nullIfZero(manga.Chapters), nullIfZero(manga.Volumes),
+		nullDate(manga.Published.From.Time), nullDate(manga.Published.To.Time),
+		nullIfEmpty(manga.Images.Webp.SmallImageUrl), nullIfEmpty(manga.Images.Webp.LargeImageUrl))
+	if err != nil {
+		return fmt.Errorf("insert manga %d: %w", manga.MalId, err)
+	}
+	return nil
+}
+
+func (p *Persister) insertMangaDescription(tx *sql.Tx, manga jikan.MangaBase) error {
+	var b strings.Builder
+	if manga.Synopsis != "" {
+		b.WriteString(manga.Synopsis)
+	}
+	if manga.Background != "" {
+		if b.Len() > 0 {
+			b.WriteString("\n\n")
+		}
+		b.WriteString(manga.Background)
+	}
+	if b.Len() == 0 {
+		return nil
+	}
+
+	_, err := tx.Exec(`
+		INSERT OR REPLACE INTO manga_descriptions (manga_id, description)
+		VALUES (?, ?)
+	`, manga.MalId, b.String())
+	if err != nil {
+		return fmt.Errorf("insert manga description for %d: %w", manga.MalId, err)
+	}
+	return nil
+}
+
+func (p *Persister) insertMangaSynonyms(tx *sql.Tx, manga jikan.MangaBase) error {
+	if _, err := tx.Exec(`DELETE FROM manga_synonyms WHERE manga_id = ?`, manga.MalId); err != nil {
+		return fmt.Errorf("clear manga synonyms for %d: %w", manga.MalId, err)
+	}
+
+	for _, synonym := range append([]struct{ typ, title string }{
+		{"English", manga.TitleEnglish},
+		{"Japanese", manga.TitleJapanese},
+	}, func() []struct{ typ, title string } {
+		result := make([]struct{ typ, title string }, 0, len(manga.TitleSynonyms))
+		for _, title := range manga.TitleSynonyms {
+			result = append(result, struct{ typ, title string }{"Synonym", title})
+		}
+		return result
+	}()...) {
+		if synonym.title == "" || synonym.title == manga.Title {
+			continue
+		}
+		if _, err := tx.Exec(`
+			INSERT OR IGNORE INTO manga_synonyms (manga_id, type, title)
+			VALUES (?, ?, ?)
+		`, manga.MalId, synonym.typ, synonym.title); err != nil {
+			return fmt.Errorf("insert manga synonym for %d: %w", manga.MalId, err)
+		}
+	}
+	return nil
+}
+
+func (p *Persister) insertMangaAuthors(tx *sql.Tx, manga jikan.MangaBase) error {
+	for _, author := range manga.Authors {
+		if author.MalId == 0 || author.Name == "" {
+			continue
+		}
+		if _, err := tx.Exec(`
+			INSERT OR IGNORE INTO people (mal_id, name, mal_url)
+			VALUES (?, ?, ?)
+		`, author.MalId, author.Name, nullIfEmpty(author.Url)); err != nil {
+			return fmt.Errorf("insert manga author %d: %w", author.MalId, err)
+		}
+		role := author.Type
+		if role == "" {
+			role = "Author"
+		}
+		if _, err := tx.Exec(`
+			INSERT OR IGNORE INTO manga_authors (manga_id, person_id, role)
+			VALUES (?, ?, ?)
+		`, manga.MalId, author.MalId, role); err != nil {
+			return fmt.Errorf("link manga author %d to %d: %w", author.MalId, manga.MalId, err)
+		}
+	}
+	return nil
+}
+
+func (p *Persister) insertMangaTags(tx *sql.Tx, manga jikan.MangaBase) error {
+	groups := []struct {
+		items   []jikan.MalItem
+		tagType string
+	}{
+		{manga.Genres, "genre"},
+		{manga.ExplicitGenres, "explicit_genre"},
+		{manga.Themes, "theme"},
+		{manga.Demographics, "demographic"},
+	}
+
+	for _, group := range groups {
+		for _, item := range group.items {
+			if item.MalId == 0 || item.Name == "" {
+				continue
+			}
+			if _, err := tx.Exec(`
+				INSERT OR IGNORE INTO tags (id, name, type, url)
+				VALUES (?, ?, ?, ?)
+			`, item.MalId, item.Name, group.tagType, nullIfEmpty(item.Url)); err != nil {
+				return fmt.Errorf("insert manga tag %d: %w", item.MalId, err)
+			}
+			if _, err := tx.Exec(`
+				INSERT OR IGNORE INTO manga_tags (manga_id, tag_id)
+				VALUES (?, ?)
+			`, manga.MalId, item.MalId); err != nil {
+				return fmt.Errorf("link manga tag %d to %d: %w", item.MalId, manga.MalId, err)
+			}
+		}
+	}
+	return nil
+}
+
+func (p *Persister) insertMangaRelations(tx *sql.Tx, mangaID int, relations jikan.MangaRelations) error {
+	if _, err := tx.Exec(`DELETE FROM manga_relations WHERE manga_id = ?`, mangaID); err != nil {
+		return fmt.Errorf("clear manga relations for %d: %w", mangaID, err)
+	}
+	for _, relation := range relations.Data {
+		for _, entry := range relation.Entry {
+			if entry.Type != "manga" || entry.MalId == 0 || relation.Relation == "" {
+				continue
+			}
+			if _, err := tx.Exec(`
+				INSERT OR REPLACE INTO manga_relations (manga_id, related_manga_id, relation_type)
+				VALUES (?, ?, ?)
+			`, mangaID, entry.MalId, relation.Relation); err != nil {
+				return fmt.Errorf("insert manga relation %d -> %d: %w", mangaID, entry.MalId, err)
+			}
+		}
+	}
+	return nil
+}
+
 func (p *Persister) InsertScrapedAnime(ctx context.Context, item scrape.ScrapedAnime) error {
 	if item.Error != nil {
 		return fmt.Errorf("skipping anime with scrape error: %w", item.Error)

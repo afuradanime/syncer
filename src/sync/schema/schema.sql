@@ -137,7 +137,7 @@ CREATE TABLE anime_relations (
 
 
 CREATE TABLE mangas (
-    mal_id          int PRIMARY KEY,
+    id              int PRIMARY KEY,
     title           varchar NOT NULL,
     title_english   varchar,
     title_japanese  varchar,
@@ -154,15 +154,20 @@ CREATE TABLE mangas (
 
 CREATE TABLE manga_synonyms (
     id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    manga_id int         NOT NULL REFERENCES mangas(mal_id) ON DELETE CASCADE,
+    manga_id int         NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
     type     varchar(25) NOT NULL,
     title    varchar(255) NOT NULL,
     UNIQUE (manga_id, type, title)
 );
 
+CREATE TABLE manga_descriptions (
+    manga_id    int PRIMARY KEY REFERENCES mangas(id) ON DELETE CASCADE,
+    description text NOT NULL
+);
+
 CREATE TABLE manga_tags (
-    manga_id int NOT NULL REFERENCES mangas(mal_id) ON DELETE CASCADE,
-    tag_id   int NOT NULL REFERENCES tags(mal_id)   ON DELETE CASCADE,
+    manga_id int NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
+    tag_id   int NOT NULL REFERENCES tags(id)        ON DELETE CASCADE,
     PRIMARY KEY (manga_id, tag_id)
 );
 
@@ -174,17 +179,17 @@ CREATE TABLE people (
 );
 
 CREATE TABLE manga_authors (
-    manga_id  int NOT NULL REFERENCES mangas(mal_id) ON DELETE CASCADE,
+    manga_id  int NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
     person_id int NOT NULL REFERENCES people(mal_id) ON DELETE CASCADE,
     role      varchar(25) NOT NULL,  -- 'Story', 'Art', 'Story & Art'
     PRIMARY KEY (manga_id, person_id, role)
 );
 
 CREATE TABLE manga_relations (
-    manga_id         int NOT NULL REFERENCES mangas(mal_id) ON DELETE CASCADE,
-    related_manga_id int NOT NULL REFERENCES mangas(mal_id) ON DELETE CASCADE,
+    manga_id         int NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
+    related_manga_id int NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
     relation_type    varchar(25) NOT NULL,
-    PRIMARY KEY (manga_id, related_manga_id)
+    PRIMARY KEY (manga_id, related_manga_id, relation_type)
 );
 
 -- Index for filtering by manga tag

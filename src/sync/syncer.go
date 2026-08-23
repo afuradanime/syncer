@@ -89,6 +89,7 @@ func (s *Syncer) RunPartialSync() error {
 
 	syncReport := &SyncReport{
 		SkippedEntries: make([]SyncError, 0),
+		SyncMode:       "partial",
 	}
 
 	// Scrape jikan data from last database insert
@@ -96,15 +97,25 @@ func (s *Syncer) RunPartialSync() error {
 	defer stop()
 
 	resultsQueue := make(chan scrape.ScrapedAnime, 100)
+	mangaQueue := make(chan scrape.ScrapedManga, 100)
 	var wg gosync.WaitGroup
 
-	wg.Add(1)
+	wg.Add(2)
 	go processAnimeQueue(resultsQueue, &wg, persister, syncReport)
+	go processMangaQueue(mangaQueue, &wg, persister, syncReport)
 
+	syncReport.AnimeScrapeStartedAt = time.Now().UTC().Format(time.RFC3339)
 	err = scrape.ScrapePartialAnime(ctx, resultsQueue, s.Config, db)
 	if err != nil {
 		return fmt.Errorf("scrape partial anime: %w", err)
 	}
+
+	syncReport.AnimeScrapeEndedAt = time.Now().UTC().Format(time.RFC3339)
+	syncReport.MangaScrapeStartedAt = time.Now().UTC().Format(time.RFC3339)
+	if err := scrape.ScrapePartialManga(ctx, mangaQueue, s.Config, db); err != nil {
+		return fmt.Errorf("scrape partial manga: %w", err)
+	}
+	syncReport.MangaScrapeEndedAt = time.Now().UTC().Format(time.RFC3339)
 
 	wg.Wait()
 
@@ -142,24 +153,69 @@ func processAnimeQueue(results <-chan scrape.ScrapedAnime, wg *gosync.WaitGroup,
 		processedCount++
 
 		if item.Error != nil {
+
 			fmt.Printf("[Persistency Worker error] Failed relations for MalID %d: %v\n", item.Anime.MalId, item.Error)
 
 			// Record the failure
+			report.mu.Lock()
 			report.SkippedCount++
 			report.SkippedEntries = append(report.SkippedEntries, SyncError{
 				MalID:  item.Anime.MalId,
 				Title:  item.Anime.Title,
 				Reason: item.Error.Error(),
 			})
+			report.mu.Unlock()
 		} else {
+
 			fmt.Printf("[Persistency Worker] Persisting MalID %d: %s\n", item.Anime.MalId, item.Anime.Title)
 			persister.InsertScrapedAnime(context.Background(), item)
+			report.mu.Lock()
 			report.SuccessCount++
+			report.mu.Unlock()
 		}
 	}
 
 	fmt.Printf("[Persistency Worker] Finished processing. Total: %d, Success: %d, Skipped: %d\n",
 		report.TotalProcessed, report.SuccessCount, report.SkippedCount)
+}
+
+func processMangaQueue(results <-chan scrape.ScrapedManga, wg *gosync.WaitGroup, persister *store.Persister, report *SyncReport) {
+	defer wg.Done()
+
+	for item := range results {
+
+		if item.Error != nil {
+
+			report.mu.Lock()
+			report.SkippedCount++
+			report.SkippedEntries = append(report.SkippedEntries, SyncError{
+				MalID:  item.Manga.MalId,
+				Title:  item.Manga.Title,
+				Reason: item.Error.Error(),
+			})
+
+			report.mu.Unlock()
+			continue
+		}
+
+		if err := persister.InsertScrapedManga(context.Background(), item); err != nil {
+
+			report.mu.Lock()
+			report.SkippedCount++
+			report.SkippedEntries = append(report.SkippedEntries, SyncError{
+				MalID:  item.Manga.MalId,
+				Title:  item.Manga.Title,
+				Reason: err.Error(),
+			})
+
+			report.mu.Unlock()
+			continue
+		}
+
+		report.mu.Lock()
+		report.SuccessCount++
+		report.mu.Unlock()
+	}
 }
 
 func (s *Syncer) RunFullSync() error {
@@ -203,6 +259,7 @@ func (s *Syncer) RunFullSync() error {
 
 	syncReport := &SyncReport{
 		SkippedEntries: make([]SyncError, 0),
+		SyncMode:       "full",
 	}
 
 	// Scrape all jikan data & insert it into the database in parallel
@@ -211,15 +268,25 @@ func (s *Syncer) RunFullSync() error {
 
 	// Buffer of 100 for the scraper to write to
 	resultsQueue := make(chan scrape.ScrapedAnime, 100)
+	mangaQueue := make(chan scrape.ScrapedManga, 100)
 	var wg gosync.WaitGroup
 
-	wg.Add(1)
+	wg.Add(2)
 	go processAnimeQueue(resultsQueue, &wg, persister, syncReport)
+	go processMangaQueue(mangaQueue, &wg, persister, syncReport)
 
+	syncReport.AnimeScrapeStartedAt = time.Now().UTC().Format(time.RFC3339)
 	err = scrape.ScrapeAllAnime(ctx, resultsQueue, s.Config)
 	if err != nil {
 		return fmt.Errorf("scrape all anime: %w", err)
 	}
+
+	syncReport.AnimeScrapeEndedAt = time.Now().UTC().Format(time.RFC3339)
+	syncReport.MangaScrapeStartedAt = time.Now().UTC().Format(time.RFC3339)
+	if err := scrape.ScrapeAllManga(ctx, mangaQueue, s.Config); err != nil {
+		return fmt.Errorf("scrape all manga: %w", err)
+	}
+	syncReport.MangaScrapeEndedAt = time.Now().UTC().Format(time.RFC3339)
 
 	wg.Wait()
 
