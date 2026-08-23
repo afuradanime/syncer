@@ -43,6 +43,10 @@ func (s *Syncer) RunPartialSync() error {
 		return fmt.Errorf("checksum mismatch: expected %s, got %s", manifest.Checksum, *checksum)
 	}
 
+	if publish.CURRENT_SCHEMA_VERSION != manifest.SchemaVersion {
+		return fmt.Errorf("schema version mismatch: expected %d, got %d", manifest.SchemaVersion, publish.CURRENT_SCHEMA_VERSION)
+	}
+
 	fmt.Printf("[Syncer] Checksum verified for database: %s\n", *checksum)
 
 	// Create a temporary copy of the database for partial sync
@@ -97,7 +101,7 @@ func (s *Syncer) RunPartialSync() error {
 	wg.Add(1)
 	go processAnimeQueue(resultsQueue, &wg, persister, syncReport)
 
-	err = scrape.ScrapePartialAnime(ctx, resultsQueue, s.Config)
+	err = scrape.ScrapePartialAnime(ctx, resultsQueue, s.Config, db)
 	if err != nil {
 		return fmt.Errorf("scrape partial anime: %w", err)
 	}

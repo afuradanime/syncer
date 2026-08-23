@@ -10,9 +10,11 @@ import (
 	"time"
 )
 
+const CURRENT_SCHEMA_VERSION = 1
+
 type Manifest struct {
 	Filename      string `json:"filename"`
-	SchemaVersion string `json:"schema_version"`
+	SchemaVersion int64  `json:"schema_version"`
 	GeneratedAt   string `json:"generated_at"`
 	Version       string `json:"version"`
 	Checksum      string `json:"checksum"`
@@ -47,7 +49,7 @@ func CreateManifest(dbPath, version string) (*Manifest, error) {
 
 	manifest := &Manifest{
 		Filename:      dbPath,
-		SchemaVersion: "1",
+		SchemaVersion: CURRENT_SCHEMA_VERSION,
 		GeneratedAt:   time.Now().UTC().Format(time.RFC3339),
 		Version:       version,
 		Checksum:      *checksum,

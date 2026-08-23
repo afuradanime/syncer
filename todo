@@ -1,0 +1,1 @@
+- There is some wasted work in partial sync, it should strat from the item we give it not just page
