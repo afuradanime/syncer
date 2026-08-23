@@ -138,3 +138,12 @@ func ScrapeAllAnime(ctx context.Context, results chan<- ScrapedAnime, cfg config
 	fmt.Printf("[Scraper] Finished successfully. Total items sent to queue: %d\n", totalProcessed)
 	return nil
 }
+
+func ScrapePartialAnime(ctx context.Context, results chan<- ScrapedAnime, cfg config.Config) error {
+
+	fmt.Println("Starting anime scraper. Press Ctrl+C to stop.")
+
+	defer close(results)
+
+	return nil
+}

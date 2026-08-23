@@ -28,13 +28,12 @@ func PublishDatabase(tempPath, destPath string, version string) error {
 	}
 	manifestFile.Close()
 
-	// Atomic renames
+	// Copy to correct paths
 	if err := os.Rename(tempPath, destPath); err != nil {
 		os.Remove(tempManifestPath) // Clean up the temp manifest if DB publish fails
 		return fmt.Errorf("rename temp db to final destination: %w", err)
 	}
 
-	// Rename the manifest
 	if err := os.Rename(tempManifestPath, destManifestPath); err != nil {
 		return fmt.Errorf("rename temp manifest to final destination: %w", err)
 	}

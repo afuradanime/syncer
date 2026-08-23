@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	_ "embed"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 
@@ -30,6 +31,37 @@ func CreateTempDatabase(destination string) (string, error) {
 	}
 
 	return path, nil
+}
+
+func CopyDatabaseToTemp(origin string) (string, error) {
+	dir := filepath.Dir(origin)
+
+	dst, err := os.CreateTemp(dir, "syncer_temp_*.db")
+	if err != nil {
+		return "", fmt.Errorf("create temp database file: %w", err)
+	}
+	defer dst.Close()
+
+	if err := copyFile(origin, dst); err != nil {
+		os.Remove(dst.Name())
+		return "", fmt.Errorf("copy database to temp: %w", err)
+	}
+
+	return dst.Name(), nil
+}
+
+func copyFile(src string, dst *os.File) error {
+	srcFile, err := os.Open(src)
+	if err != nil {
+		return fmt.Errorf("open source file: %w", err)
+	}
+	defer srcFile.Close()
+
+	if _, err := io.Copy(dst, srcFile); err != nil {
+		return fmt.Errorf("copy contents: %w", err)
+	}
+
+	return nil
 }
 
 func OpenDatabase(path string) (*sql.DB, error) {

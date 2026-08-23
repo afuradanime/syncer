@@ -65,3 +65,20 @@ func WriteManifest(file *os.File, manifest *Manifest) error {
 	}
 	return nil
 }
+
+func ReadManifest(dbPath string) (*Manifest, error) {
+	manifestPath := dbPath + ".manifest.json"
+	file, err := os.Open(manifestPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to open manifest file: %w", err)
+	}
+	defer file.Close()
+
+	var manifest Manifest
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&manifest); err != nil {
+		return nil, fmt.Errorf("failed to decode manifest: %w", err)
+	}
+
+	return &manifest, nil
+}
