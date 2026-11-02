@@ -81,23 +81,24 @@ func (s *Syncer) RunPartialSync() error {
 	mangaQueue := make(chan scrape.ScrapedManga, 100)
 	var wg gosync.WaitGroup
 
-	wg.Add(2)
+	wg.Add(1)
 	go processAnimeQueue(resultsQueue, &wg, persister, syncReport)
-	go processMangaQueue(mangaQueue, &wg, persister, syncReport)
 
 	syncReport.AnimeScrapeStartedAt = time.Now().UTC().Format(time.RFC3339)
 	err = scrape.ScrapePartialAnime(ctx, resultsQueue, s.Config, db)
 	if err != nil {
 		return fmt.Errorf("scrape partial anime: %w", err)
 	}
+	wg.Wait()
 
 	syncReport.AnimeScrapeEndedAt = time.Now().UTC().Format(time.RFC3339)
 	syncReport.MangaScrapeStartedAt = time.Now().UTC().Format(time.RFC3339)
+	wg.Add(1)
+	go processMangaQueue(mangaQueue, &wg, persister, syncReport)
 	if err := scrape.ScrapePartialManga(ctx, mangaQueue, s.Config, db); err != nil {
 		return fmt.Errorf("scrape partial manga: %w", err)
 	}
 	syncReport.MangaScrapeEndedAt = time.Now().UTC().Format(time.RFC3339)
-
 	wg.Wait()
 
 	if err := publish.SetupDatabasePragmas(db); err != nil {
@@ -252,23 +253,24 @@ func (s *Syncer) RunFullSync() error {
 	mangaQueue := make(chan scrape.ScrapedManga, 100)
 	var wg gosync.WaitGroup
 
-	wg.Add(2)
+	wg.Add(1)
 	go processAnimeQueue(resultsQueue, &wg, persister, syncReport)
-	go processMangaQueue(mangaQueue, &wg, persister, syncReport)
 
 	syncReport.AnimeScrapeStartedAt = time.Now().UTC().Format(time.RFC3339)
 	err = scrape.ScrapeAllAnime(ctx, resultsQueue, s.Config)
 	if err != nil {
 		return fmt.Errorf("scrape all anime: %w", err)
 	}
+	wg.Wait()
 
 	syncReport.AnimeScrapeEndedAt = time.Now().UTC().Format(time.RFC3339)
 	syncReport.MangaScrapeStartedAt = time.Now().UTC().Format(time.RFC3339)
+	wg.Add(1)
+	go processMangaQueue(mangaQueue, &wg, persister, syncReport)
 	if err := scrape.ScrapeAllManga(ctx, mangaQueue, s.Config); err != nil {
 		return fmt.Errorf("scrape all manga: %w", err)
 	}
 	syncReport.MangaScrapeEndedAt = time.Now().UTC().Format(time.RFC3339)
-
 	wg.Wait()
 
 	if err := publish.SetupDatabasePragmas(db); err != nil {

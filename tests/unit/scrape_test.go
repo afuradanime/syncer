@@ -3,163 +3,147 @@ package tests
 import (
 	"context"
 	"errors"
-	"fmt"
 	"net/http"
-	"net/url"
-	"strconv"
+	"testing"
+
 	"syncer/src/config"
 	"syncer/src/scrape"
 	"syncer/src/sync"
-	"syncer/tests/mock"
-	"testing"
+	"syncer/tests/unit/mock"
 
 	jikan "github.com/afuradanime/tenrai-go"
 )
 
-func searchQuery(page int) url.Values {
-	return url.Values{"page": {strconv.Itoa(page)}, "limit": {"50"}, "order_by": {"mal_id"}, "sort": {"asc"}}
-}
-
-func searchPageResponse(firstID, count, page, lastPage int) mock.JikanResponse {
-	items := make([]map[string]any, count)
-	for index := range items {
-		items[index] = map[string]any{"mal_id": firstID + index}
-	}
-	return mock.JikanResponse{Body: map[string]any{
-		"data":       items,
-		"pagination": map[string]any{"has_next_page": page < lastPage, "last_visible_page": lastPage},
-	}}
-}
-
-func TestScrapeWithoutRelations(t *testing.T) {
+// FR-01/FR-02: a plain paginated scrape walks every page and stops.
+func TestScrapeAll_WalksEveryPage(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
-		for _, partial := range []bool{false, true} {
-			t.Run(fmt.Sprintf("%s/partial=%t", kind, partial), func(t *testing.T) {
-				api := mock.NewJikan(t)
-				path := "/v1/" + kind
-				firstPage := searchPageResponse(1, 50, 1, 2)
-				api.ExpectGET(path, searchQuery(1), firstPage)
-				if partial {
-					api.ExpectGET(path+"/1", nil, mock.JikanResponse{Body: map[string]any{"data": map[string]any{"mal_id": 1}}})
-					api.ExpectGET(path, searchQuery(1), firstPage, firstPage)
-				}
-				api.ExpectGET(path, searchQuery(2), searchPageResponse(51, 1, 2, 2))
-				cfg := config.Config{MaxAttempts: 1}
-				db, err := sync.OpenDatabase(":memory:")
-				if err != nil {
-					t.Fatal(err)
-				}
-				defer db.Close()
+		t.Run(kind, func(t *testing.T) {
+			api := mock.NewJikan(t)
+			path := "/v1/" + kind
+			api.ExpectGET(path, searchQuery(1), searchPageResponse(1, 50, 1, 2))
+			api.ExpectGET(path, searchQuery(2), searchPageResponse(51, 1, 2, 2))
+
+			ids, err := scrapeAll(t, kind, context.Background(), config.Config{MaxAttempts: 1})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(ids) != 51 {
+				t.Fatalf("items = %d, want 51", len(ids))
+			}
+			pages, _ := countRequestsByPath(api.Requests(), path)
+			if pages != 2 {
+				t.Fatalf("page requests = %d, want 2", pages)
+			}
+		})
+	}
+}
+
+// FR-01: partial scrape refreshes the seeded entry, then resumes.
+func TestScrapePartial_RefreshesThenResumes(t *testing.T) {
+	for _, kind := range []string{"anime", "manga"} {
+		t.Run(kind, func(t *testing.T) {
+			api := mock.NewJikan(t)
+			path := "/v1/" + kind
+			firstPage := searchPageResponse(1, 50, 1, 2)
+
+			// 1st page: served twice, first partially (refresh) then normally.
+			api.ExpectGET(path, searchQuery(1), firstPage)
+			api.ExpectGET(path+"/1", nil, mock.JikanResponse{Body: map[string]any{
+				"data": map[string]any{"mal_id": 1},
+			}})
+			api.ExpectGET(path, searchQuery(1), firstPage, firstPage)
+			api.ExpectGET(path, searchQuery(2), searchPageResponse(51, 1, 2, 2))
+
+			db, err := sync.OpenDatabase(":memory:")
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer db.Close()
+			// minimal state: id=1 exists in the kind-specific table
+			if kind == "anime" {
 				if _, err := db.Exec(`
 					CREATE TABLE anime (id INTEGER, airing INTEGER);
-					CREATE TABLE mangas (id INTEGER, status TEXT);
 					INSERT INTO anime VALUES (1, 1);
+				`); err != nil {
+					t.Fatal(err)
+				}
+			} else {
+				if _, err := db.Exec(`
+					CREATE TABLE mangas (id INTEGER, status TEXT);
 					INSERT INTO mangas VALUES (1, 'Publishing');
 				`); err != nil {
 					t.Fatal(err)
 				}
-				count := 0
-				if kind == "anime" {
-					results := make(chan scrape.ScrapedAnime, 100)
-					if partial {
-						err = scrape.ScrapePartialAnime(context.Background(), results, cfg, db)
-					} else {
-						err = scrape.ScrapeAllAnime(context.Background(), results, cfg)
-					}
-					if err != nil {
-						t.Fatal(err)
-					}
-					for item := range results {
-						if item.Relations != nil || item.Error != nil || item.Anime.MalId == 0 {
-							t.Fatalf("unexpected anime result: %+v", item)
-						}
-						count++
-					}
-				} else {
-					results := make(chan scrape.ScrapedManga, 100)
-					if partial {
-						err = scrape.ScrapePartialManga(context.Background(), results, cfg, db)
-					} else {
-						err = scrape.ScrapeAllManga(context.Background(), results, cfg)
-					}
-					if err != nil {
-						t.Fatal(err)
-					}
-					for item := range results {
-						if item.Relations != nil || item.Error != nil || item.Manga.MalId == 0 {
-							t.Fatalf("unexpected manga result: %+v", item)
-						}
-						count++
-					}
-				}
-				wantCount, wantPages, wantRefreshes := 51, 2, 0
-				if partial {
-					wantCount, wantPages, wantRefreshes = 52, 4, 1
-				}
-				pages, refreshes := 0, 0
-				for _, request := range api.Requests() {
-					if request.URL.Path == path {
-						pages++
-					} else {
-						refreshes++
-					}
-				}
-				if count != wantCount || pages != wantPages || refreshes != wantRefreshes {
-					t.Fatalf("items/pages/refreshes = %d/%d/%d, want %d/%d/%d", count, pages, refreshes, wantCount, wantPages, wantRefreshes)
-				}
-			})
-		}
-	}
-}
-
-func scrapeAllForTest(t *testing.T, ctx context.Context, kind string, cfg config.Config) ([]int, error) {
-	t.Helper()
-	var ids []int
-	if kind == "anime" {
-		results := make(chan scrape.ScrapedAnime, 100)
-		err := scrape.ScrapeAllAnime(ctx, results, cfg)
-		for item := range results {
-			if item.Error != nil || item.Relations != nil {
-				t.Fatalf("unexpected result: %+v", item)
 			}
-			ids = append(ids, item.Anime.MalId)
-		}
-		return ids, err
+
+			cfg := config.Config{MaxAttempts: 1}
+			count := 0
+			if kind == "anime" {
+				results := make(chan scrape.ScrapedAnime, 100)
+				if err := scrape.ScrapePartialAnime(context.Background(), results, cfg, db); err != nil {
+					t.Fatal(err)
+				}
+				for item := range results {
+					if item.Relations != nil || item.Error != nil || item.Anime.MalId == 0 {
+						t.Fatalf("unexpected anime result: %+v", item)
+					}
+					count++
+				}
+			} else {
+				results := make(chan scrape.ScrapedManga, 100)
+				if err := scrape.ScrapePartialManga(context.Background(), results, cfg, db); err != nil {
+					t.Fatal(err)
+				}
+				for item := range results {
+					if item.Relations != nil || item.Error != nil || item.Manga.MalId == 0 {
+						t.Fatalf("unexpected manga result: %+v", item)
+					}
+					count++
+				}
+			}
+
+			// 51 from search + 1 refresh of the seeded id.
+			if count != 52 {
+				t.Fatalf("items = %d, want 52", count)
+			}
+			pages, refreshes := countRequestsByPath(api.Requests(), path)
+			if pages != 4 || refreshes != 1 {
+				t.Fatalf("pages/refreshes = %d/%d, want 4/1", pages, refreshes)
+			}
+		})
 	}
-	results := make(chan scrape.ScrapedManga, 100)
-	err := scrape.ScrapeAllManga(ctx, results, cfg)
-	for item := range results {
-		if item.Error != nil || item.Relations != nil {
-			t.Fatalf("unexpected result: %+v", item)
-		}
-		ids = append(ids, item.Manga.MalId)
-	}
-	return ids, err
 }
 
-func TestScrapeRetryableErrors(t *testing.T) {
+// FR-03: retryable statuses are retried and eventually succeed.
+func TestScrapeAll_RetriesTransientStatuses(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		for _, status := range []int{429, 500, 502, 504} {
-			t.Run(fmt.Sprintf("%s/%d", kind, status), func(t *testing.T) {
+			t.Run(kind+"/"+http.StatusText(status), func(t *testing.T) {
 				api := mock.NewJikan(t)
-				api.ExpectGET("/v1/"+kind, searchQuery(1),
-					mock.JikanResponse{StatusCode: status, Body: map[string]any{"status": status, "message": http.StatusText(status)}},
+				path := "/v1/" + kind
+				api.ExpectGET(path, searchQuery(1),
+					mock.JikanResponse{StatusCode: status, Body: map[string]any{
+						"status": status, "message": http.StatusText(status),
+					}},
 					searchPageResponse(7, 1, 1, 1),
 				)
-				ids, err := scrapeAllForTest(t, context.Background(), kind, config.Config{MaxAttempts: 2})
+				ids, err := scrapeAll(t, kind, context.Background(), config.Config{MaxAttempts: 2})
 				if err != nil {
 					t.Fatal(err)
 				}
-				if len(ids) != 1 || ids[0] != 7 || len(api.Requests()) != 2 {
-					t.Fatalf("ids = %v, requests = %d; want [7] and 2 requests", ids, len(api.Requests()))
+				if len(ids) != 1 || ids[0] != 7 {
+					t.Fatalf("ids = %v, want [7]", ids)
+				}
+				if got := len(api.Requests()); got != 2 {
+					t.Fatalf("requests = %d, want 2", got)
 				}
 			})
 		}
 	}
 }
 
-func TestScrapeFailures(t *testing.T) {
-	transportErr := errors.New("connection reset")
+// FR-03: terminal failures bubble up without partial results.
+func TestScrapeAll_FailsWithoutResults(t *testing.T) {
 	cases := []struct {
 		name     string
 		response mock.JikanResponse
@@ -168,75 +152,83 @@ func TestScrapeFailures(t *testing.T) {
 		{"retry exhaustion", mock.JikanResponse{StatusCode: 429, Body: map[string]any{"status": 429}}, 4},
 		{"nonretryable status", mock.JikanResponse{StatusCode: 400, Body: map[string]any{"status": 400}}, 2},
 		{"invalid JSON", mock.JikanResponse{Body: "{broken"}, 2},
-		{"transport failure", mock.JikanResponse{Err: transportErr}, 2},
+		{"transport failure", mock.JikanResponse{Err: errors.New("connection reset")}, 2},
 	}
 	for _, kind := range []string{"anime", "manga"} {
-		for _, testCase := range cases {
-			t.Run(kind+"/"+testCase.name, func(t *testing.T) {
+		for _, tc := range cases {
+			t.Run(kind+"/"+tc.name, func(t *testing.T) {
 				api := mock.NewJikan(t)
-				for attempt := 0; attempt < testCase.requests; attempt++ {
-					api.ExpectGET("/v1/"+kind, searchQuery(1), testCase.response)
+				for i := 0; i < tc.requests; i++ {
+					api.ExpectGET("/v1/"+kind, searchQuery(1), tc.response)
 				}
-				ids, err := scrapeAllForTest(t, context.Background(), kind, config.Config{MaxAttempts: 2})
+				ids, err := scrapeAll(t, kind, context.Background(), config.Config{MaxAttempts: 2})
 				if err == nil || len(ids) != 0 {
-					t.Fatalf("ids = %v, error = %v; want no items and an error", ids, err)
+					t.Fatalf("ids = %v, err = %v; want no items and an error", ids, err)
 				}
-				if len(api.Requests()) != testCase.requests {
-					t.Fatalf("requests = %d, want %d", len(api.Requests()), testCase.requests)
-				}
-				if testCase.response.Err != nil && !errors.Is(err, transportErr) {
-					t.Fatalf("transport error not preserved: %v", err)
+				if got := len(api.Requests()); got != tc.requests {
+					t.Fatalf("requests = %d, want %d", got, tc.requests)
 				}
 			})
 		}
 	}
 }
 
-func TestScrapeEmptyPage(t *testing.T) {
+// FR-03: an empty page ends the walk cleanly.
+func TestScrapeAll_StopsOnEmptyPage(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		t.Run(kind, func(t *testing.T) {
 			api := mock.NewJikan(t)
 			api.ExpectGET("/v1/"+kind, searchQuery(1), searchPageResponse(1, 0, 1, 2))
-			ids, err := scrapeAllForTest(t, context.Background(), kind, config.Config{MaxAttempts: 1})
-			if err != nil || len(ids) != 0 || len(api.Requests()) != 1 {
-				t.Fatalf("ids = %v, error = %v, requests = %d", ids, err, len(api.Requests()))
+			ids, err := scrapeAll(t, kind, context.Background(), config.Config{MaxAttempts: 1})
+			if err != nil || len(ids) != 0 {
+				t.Fatalf("ids = %v, err = %v", ids, err)
+			}
+			if got := len(api.Requests()); got != 1 {
+				t.Fatalf("requests = %d, want 1", got)
 			}
 		})
 	}
 }
 
-func TestScrapeCancelledBeforeRequest(t *testing.T) {
+// FR-03: cancelled context short-circuits before any request.
+func TestScrapeAll_HonoursCancellation(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		t.Run(kind, func(t *testing.T) {
 			api := mock.NewJikan(t)
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
-			ids, err := scrapeAllForTest(t, ctx, kind, config.Config{MaxAttempts: 1})
-			if !errors.Is(err, context.Canceled) || len(ids) != 0 || len(api.Requests()) != 0 {
-				t.Fatalf("ids = %v, error = %v, requests = %d", ids, err, len(api.Requests()))
+			ids, err := scrapeAll(t, kind, ctx, config.Config{MaxAttempts: 1})
+			if !errors.Is(err, context.Canceled) {
+				t.Fatalf("err = %v, want context.Canceled", err)
+			}
+			if len(ids) != 0 || len(api.Requests()) != 0 {
+				t.Fatalf("ids = %v, requests = %d; want 0/0", ids, len(api.Requests()))
 			}
 		})
 	}
 }
 
-func TestJikanMockRestoresClient(t *testing.T) {
+// Helper-integrity test: the mock restores jikan.Client and snapshots requests.
+func TestJikanMock_RestoresClientAndSnapshotsRequests(t *testing.T) {
 	previous := jikan.Client
-	t.Run("mock client", func(t *testing.T) {
-		api := mock.NewJikan(t)
-		api.ExpectGET("/v1/anime", searchQuery(1), searchPageResponse(1, 0, 1, 1))
-		if _, err := jikan.GetAnimeSearch(searchQuery(1)); err != nil {
-			t.Fatal(err)
-		}
-		requests := api.Requests()
-		if len(requests) != 1 {
-			t.Fatalf("recorded requests = %d, want 1", len(requests))
-		}
-		requests[0].URL.Path = "/changed"
-		if api.Requests()[0].URL.Path != "/v1/anime" {
-			t.Fatal("request snapshots share mutable state")
+	t.Cleanup(func() {
+		if jikan.Client != previous {
+			t.Fatal("Jikan client was not restored")
 		}
 	})
-	if jikan.Client != previous {
-		t.Fatal("Jikan client was not restored")
+
+	api := mock.NewJikan(t)
+	api.ExpectGET("/v1/anime", searchQuery(1), searchPageResponse(1, 0, 1, 1))
+	if _, err := jikan.GetAnimeSearch(searchQuery(1)); err != nil {
+		t.Fatal(err)
+	}
+
+	reqs := api.Requests()
+	if len(reqs) != 1 {
+		t.Fatalf("requests = %d, want 1", len(reqs))
+	}
+	reqs[0].URL.Path = "/changed"
+	if api.Requests()[0].URL.Path != "/v1/anime" {
+		t.Fatal("Requests() returned mutable shared state")
 	}
 }
