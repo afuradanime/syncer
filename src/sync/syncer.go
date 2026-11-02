@@ -34,20 +34,9 @@ func (s *Syncer) RunPartialSync() error {
 		return fmt.Errorf("failed to read manifest: %w", err)
 	}
 
-	checksum, err := publish.CalculateChecksum(s.Config.DbPath, manifest.Version)
-	if err != nil {
-		return fmt.Errorf("failed to calculate checksum: %w", err)
-	}
-
-	if *checksum != manifest.Checksum {
-		return fmt.Errorf("checksum mismatch: expected %s, got %s", manifest.Checksum, *checksum)
-	}
-
 	if publish.CURRENT_SCHEMA_VERSION != manifest.SchemaVersion {
 		return fmt.Errorf("schema version mismatch: expected %d, got %d", manifest.SchemaVersion, publish.CURRENT_SCHEMA_VERSION)
 	}
-
-	fmt.Printf("[Syncer] Checksum verified for database: %s\n", *checksum)
 
 	// Create a temporary copy of the database for partial sync
 	tempDbPath, err := CopyDatabaseToTemp(s.Config.DbPath)
@@ -71,14 +60,6 @@ func (s *Syncer) RunPartialSync() error {
 		return CloseDatabase(db)
 	}
 	defer closeDB()
-
-	if os.Chmod(tempDbPath, 0777) != nil {
-		return fmt.Errorf("failed to set temporary database copy to readable: %w", err)
-	}
-
-	if _, err := db.Exec("PRAGMA query_only = OFF"); err != nil {
-		return fmt.Errorf("failed to set query_only mode: %w", err)
-	}
 
 	lookups, err := store.LoadLookups(db)
 	if err != nil {
@@ -154,7 +135,7 @@ func processAnimeQueue(results <-chan scrape.ScrapedAnime, wg *gosync.WaitGroup,
 
 		if item.Error != nil {
 
-			fmt.Printf("[Persistency Worker error] Failed relations for MalID %d: %v\n", item.Anime.MalId, item.Error)
+			fmt.Printf("[Persistency Worker error] Failed fetching MalID %d: %v\n", item.Anime.MalId, item.Error)
 
 			// Record the failure
 			report.mu.Lock()

@@ -1,8 +1,11 @@
-PROJECT_NAME := anime-syncer
+PROJECT_NAME ?= anime-syncer
 
-GO := go
+GO ?= go
+STATICCHECK ?= staticcheck
+CONFIG ?= config.ini
+TEST_FLAGS ?= -v
 
-BIN_DIR := ./bin
+BIN_DIR ?= ./bin
 BINARY := $(BIN_DIR)/$(PROJECT_NAME)
 
 .PHONY: help
@@ -10,9 +13,9 @@ help:
 	@echo "Available targets:"
 	@echo ""
 	@echo "  build              Build the project"
-	@echo "  run_full			Run the project in full mode"
-	@echo "  run_partial		Run the project in partial mode"
-	@echo "  test               Run unit tests"
+	@echo "  run-full           Sync all anime and manga"
+	@echo "  run-partial        Refresh active entries and scan for new items"
+	@echo "  test               Run all tests"
 	@echo "  test-race          Run tests with race detector"
 	@echo "  fmt                Format Go source files"
 	@echo "  vet                Run go vet"
@@ -20,29 +23,32 @@ help:
 	@echo "  check              Run formatting, vet, lint and tests"
 	@echo "  tidy               Tidy Go dependencies"
 	@echo "  clean              Remove build artifacts"
+	@echo ""
+	@echo "Run targets require DATABASE_PATH; CONFIG defaults to config.ini."
+	@echo "Override test options with TEST_FLAGS (default: -v)."
 
 # Build
 .PHONY: build
 build:
-	@mkdir -p $(BIN_DIR)
-	@$(GO) build -o $(BINARY) ./src
+	@mkdir -p "$(BIN_DIR)"
+	@$(GO) build -o "$(BINARY)" ./src
 	@echo "Executable saved to $(BINARY)"
 
-.PHONY: run_full
-run_full:
-	@$(GO) run ./src --config config.ini --mode full
+.PHONY: run-full run_full
+run-full run_full:
+	@$(GO) run ./src --config "$(CONFIG)" --mode full
 
-.PHONY: run_partial
-run_partial:
-	@$(GO) run ./src --config config.ini --mode partial
+.PHONY: run-partial run_partial
+run-partial run_partial:
+	@$(GO) run ./src --config "$(CONFIG)" --mode partial
 
 .PHONY: test
 test:
-	@$(GO) test ./... -v
+	@$(GO) test $(TEST_FLAGS) ./...
 
 .PHONY: test-race
 test-race:
-	@$(GO) test ./... -race -v
+	@$(GO) test -race $(TEST_FLAGS) ./...
 
 .PHONY: fmt
 fmt:
@@ -54,7 +60,7 @@ vet:
 
 .PHONY: lint
 lint:
-	@staticcheck ./...
+	@$(STATICCHECK) ./...
 
 .PHONY: check
 check: fmt vet lint test
@@ -65,6 +71,6 @@ tidy:
 
 .PHONY: clean
 clean:
-	@rm -rf $(BIN_DIR)
+	@rm -rf "$(BIN_DIR)"
 
 .DEFAULT_GOAL := help

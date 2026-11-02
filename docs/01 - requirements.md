@@ -63,7 +63,7 @@ The system shall publish a manifest alongside each generated database file, desc
 ## Non-functional requirements
 ### NFR-01: database configuration
 
-The system shall output a read-only, performance configured, SQLite3 database file
+The system shall output a writable, performance configured, SQLite3 database file that supports runtime edits
 ### NFR-02: database update atomicity
 
 The system shall update the database atomically

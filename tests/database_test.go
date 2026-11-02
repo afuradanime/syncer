@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"syncer/src/publish"
 	"syncer/src/sync"
 )
 
@@ -33,6 +34,44 @@ func TestCreateTempDatabase(t *testing.T) {
 			filepath.Dir(path),
 			dir,
 		)
+	}
+}
+
+func TestDatabaseRemainsWritable(t *testing.T) {
+	dir := t.TempDir()
+	tempPath := filepath.Join(dir, "temp.db")
+	destPath := filepath.Join(dir, "published.db")
+	db, err := sync.OpenDatabase(tempPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := publish.SetupDatabasePragmas(db); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("CREATE TABLE runtime_edits (value TEXT)"); err != nil {
+		t.Fatalf("write after setting pragmas: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := publish.PublishDatabase(tempPath, destPath, "test"); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(destPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if info.Mode().Perm()&0200 == 0 {
+		t.Fatal("published database is not owner-writable")
+	}
+	published, err := sync.OpenDatabase(destPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer published.Close()
+	if _, err := published.Exec("INSERT INTO runtime_edits VALUES ('edited')"); err != nil {
+		t.Fatalf("write published database: %v", err)
 	}
 }
 
