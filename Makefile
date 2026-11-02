@@ -1,9 +1,11 @@
 PROJECT_NAME ?= anime-syncer
 
 GO ?= go
+PYTHON ?= python3
 STATICCHECK ?= staticcheck
 CONFIG ?= config.ini
 TEST_FLAGS ?= -v
+SYSTEM_TEST_FLAGS ?= -v
 
 BIN_DIR ?= ./bin
 BINARY := $(BIN_DIR)/$(PROJECT_NAME)
@@ -15,7 +17,8 @@ help:
 	@echo "  build              Build the project"
 	@echo "  run-full           Sync all anime and manga"
 	@echo "  run-partial        Refresh active entries and scan for new items"
-	@echo "  test               Run all tests"
+	@echo "  test               Run Go tests"
+	@echo "  test-system        Build the binary and run Python system tests"
 	@echo "  test-race          Run tests with race detector"
 	@echo "  fmt                Format Go source files"
 	@echo "  vet                Run go vet"
@@ -49,6 +52,10 @@ test:
 .PHONY: test-race
 test-race:
 	@$(GO) test -race $(TEST_FLAGS) ./...
+
+.PHONY: test-system
+test-system: build
+	@SYNCER_BINARY="$(abspath $(BINARY))" $(PYTHON) -m pytest tests/system $(SYSTEM_TEST_FLAGS)
 
 .PHONY: fmt
 fmt:
