@@ -8,7 +8,7 @@ import (
 	"syncer/src/sync"
 )
 
-// NFR-02: temporary database is written alongside the destination.
+// OFT-REQ-NFR-02: temporary database is created beside the destination path.
 func TestCreateTempDatabase_WritesBesideDestination(t *testing.T) {
 	dir := t.TempDir()
 	destination := filepath.Join(dir, "anime.db")
@@ -31,7 +31,7 @@ func TestCreateTempDatabase_WritesBesideDestination(t *testing.T) {
 	}
 }
 
-// NFR-01: published database is owner-writable and supports runtime edits.
+// OFT-REQ-NFR-01: published database configuration remains writable and safe for runtime edits.
 func TestPublishedDatabase_IsWritable(t *testing.T) {
 	f := NewDBFixture(t)
 	dest := filepath.Join(filepath.Dir(f.Path), "published.db")
@@ -46,7 +46,7 @@ func TestPublishedDatabase_IsWritable(t *testing.T) {
 	}
 }
 
-// NFR-01: runtime edits survive after pragmas are applied.
+// OFT-REQ-NFR-01: runtime edits remain valid after publish-time database setup.
 func TestPublishedDatabase_AcceptsRuntimeEdits(t *testing.T) {
 	f := NewDBFixture(t)
 	dest := filepath.Join(filepath.Dir(f.Path), "published.db")
@@ -80,7 +80,7 @@ func TestOpenDatabase_QueriesSucceed(t *testing.T) {
 	}
 }
 
-// FR-02: schema creates all the tables a sync relies on.
+// OFT-REQ-FR-02: required schema tables are created for sync and publication.
 func TestCreateDatabaseSchema_CreatesExpectedTables(t *testing.T) {
 	f := NewDBFixture(t)
 	for _, table := range []string{

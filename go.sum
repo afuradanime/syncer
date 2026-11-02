@@ -1,5 +1,7 @@
 github.com/afuradanime/tenrai-go v0.0.0-20260822195513-7abb097ab591 h1:1C1V0ghe1RjjchFBHk2DY8Vr9QVeQ6YPCiTiaWfeSwk=
 github.com/afuradanime/tenrai-go v0.0.0-20260822195513-7abb097ab591/go.mod h1:1D1VnQqZTE5Ahy4qpTC7YNiC5RRhXaHSdlg+VOgLVrQ=
+github.com/afuradanime/tenrai-go v0.0.0-20261102203027-a0bb98ee7c4d h1:9/hyFbVaEG3dyRIW01tXbQXDuFXxBXoGDUO9J+nOWXM=
+github.com/afuradanime/tenrai-go v0.0.0-20261102203027-a0bb98ee7c4d/go.mod h1:1D1VnQqZTE5Ahy4qpTC7YNiC5RRhXaHSdlg+VOgLVrQ=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/dustin/go-humanize v1.0.1 h1:GzkhY7T5VNhEkwH0PVJgjz+fX1rhBrR7pRT3mDkpeCY=

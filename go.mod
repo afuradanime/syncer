@@ -7,7 +7,7 @@ require (
 	modernc.org/sqlite v1.56.0
 )
 
-require github.com/afuradanime/tenrai-go v0.0.0-20260822195513-7abb097ab591
+require github.com/afuradanime/tenrai-go v0.0.0-20261102203027-a0bb98ee7c4d
 
 require (
 	github.com/dustin/go-humanize v1.0.1 // indirect

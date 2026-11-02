@@ -25,7 +25,7 @@ type DBFixture struct {
 	t    *testing.T
 }
 
-// NewDBFixture opens a database at a temp path and applies the schema
+// opens a database at a temp path and applies the schema
 func NewDBFixture(t *testing.T) *DBFixture {
 	t.Helper()
 	dir := t.TempDir()
@@ -49,7 +49,7 @@ func (f *DBFixture) Publish(dest string) string {
 		f.t.Fatalf("close fixture db: %v", err)
 	}
 	if err := publish.SetupDatabasePragmas(f.DB); err != nil {
-		// pragmas applied before close in real code; here it's a no-op safety
+		// pragmas applied before close in real code; here it's a no-op
 	}
 	if err := publish.PublishDatabase(f.Path, dest, "test"); err != nil {
 		f.t.Fatalf("publish: %v", err)
@@ -63,15 +63,14 @@ func (f *DBFixture) Publish(dest string) string {
 }
 
 type SyncFixture struct {
-	API     *mock.Jikan
-	Sync    sync.Syncer
-	DBPath  string
-	cfg     config.Config
+	API    *mock.Jikan
+	Sync   sync.Syncer
+	DBPath string
+	cfg    config.Config
 }
 
 // NewSyncFixture creates a fresh Jikan mock and a Syncer pointing at a
-// fresh temp database path. It does *not* create the file — that's the
-// syncer's job (or the test's, for partial sync).
+// fresh temp database path
 func NewSyncFixture(t *testing.T) *SyncFixture {
 	t.Helper()
 	dir := t.TempDir()
@@ -84,8 +83,6 @@ func NewSyncFixture(t *testing.T) *SyncFixture {
 		cfg:    cfg,
 	}
 }
-
-// --- Request builders (shared by scrape_test and sync_test) ---
 
 func searchQuery(page int) url.Values {
 	return url.Values{
@@ -118,8 +115,6 @@ func animeRecord(id int, title string) jikan.AnimeBase {
 func mangaRecord(id int, title string) jikan.MangaBase {
 	return jikan.MangaBase{MalId: id, Title: title, Type: "Manga", Status: "Finished"}
 }
-
-// --- Assertion helpers ---
 
 func requireTable(t *testing.T, db *sql.DB, table string) {
 	t.Helper()
@@ -158,8 +153,6 @@ func requireTitle(t *testing.T, db *sql.DB, table string, id int, want string) {
 	}
 }
 
-// --- Seeding helpers used by partial-sync tests ---
-
 // SeedAnime inserts anime rows through the real persister so the fixture
 // matches what a prior sync would leave behind.
 func SeedAnime(t *testing.T, db *sql.DB, cfg config.Config, rows ...jikan.AnimeBase) {
@@ -189,8 +182,6 @@ func SeedManga(t *testing.T, db *sql.DB, cfg config.Config, rows ...jikan.MangaB
 		}
 	}
 }
-
-// --- Scrape runner used by scrape tests ---
 
 // scrapeAll runs the full-scrape entrypoint for the given kind and returns
 // the MAL IDs that came through, failing on any unexpected result shape.

@@ -14,7 +14,7 @@ import (
 	jikan "github.com/afuradanime/tenrai-go"
 )
 
-// FR-01/FR-02: a plain paginated scrape walks every page and stops.
+// OFT-REQ-FR-01: paginated scrape coverage for incremental collection and full walk behavior.
 func TestScrapeAll_WalksEveryPage(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		t.Run(kind, func(t *testing.T) {
@@ -38,7 +38,7 @@ func TestScrapeAll_WalksEveryPage(t *testing.T) {
 	}
 }
 
-// FR-01: partial scrape refreshes the seeded entry, then resumes.
+// OFT-REQ-FR-01: partial refresh and resume behavior for seeded records.
 func TestScrapePartial_RefreshesThenResumes(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		t.Run(kind, func(t *testing.T) {
@@ -114,7 +114,7 @@ func TestScrapePartial_RefreshesThenResumes(t *testing.T) {
 	}
 }
 
-// FR-03: retryable statuses are retried and eventually succeed.
+// OFT-REQ-FR-03: retry policy for transient Jikan status failures.
 func TestScrapeAll_RetriesTransientStatuses(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		for _, status := range []int{429, 500, 502, 504} {
@@ -142,7 +142,7 @@ func TestScrapeAll_RetriesTransientStatuses(t *testing.T) {
 	}
 }
 
-// FR-03: terminal failures bubble up without partial results.
+// OFT-REQ-FR-03: terminal failure handling without partial results.
 func TestScrapeAll_FailsWithoutResults(t *testing.T) {
 	cases := []struct {
 		name     string
@@ -173,7 +173,7 @@ func TestScrapeAll_FailsWithoutResults(t *testing.T) {
 	}
 }
 
-// FR-03: an empty page ends the walk cleanly.
+// OFT-REQ-FR-03: empty-page termination and clean walk shutdown.
 func TestScrapeAll_StopsOnEmptyPage(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		t.Run(kind, func(t *testing.T) {
@@ -190,7 +190,7 @@ func TestScrapeAll_StopsOnEmptyPage(t *testing.T) {
 	}
 }
 
-// FR-03: cancelled context short-circuits before any request.
+// OFT-REQ-FR-03: cancellation behavior during scrape execution.
 func TestScrapeAll_HonoursCancellation(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		t.Run(kind, func(t *testing.T) {

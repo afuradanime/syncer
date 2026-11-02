@@ -1,1 +1,2 @@
-- There is some wasted work in partial sync, it should strat from the item we give it not just page
+- [ ] There is some wasted work in partial sync, it should strat from the item we give it not just page
+- [ ] Logging in anime and manga is inconsistent

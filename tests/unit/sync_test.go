@@ -11,8 +11,8 @@ import (
 	jikan "github.com/afuradanime/tenrai-go"
 )
 
-// FR-01 / NFR-02: a partial sync refreshes seeded records, walks new pages,
-// preserves untouched rows, and publishes a matching manifest.
+// OFT-REQ-FR-01: partial sync refresh and publish behavior.
+// OFT-REQ-NFR-02: partial sync manifest publication and retained output state.
 func TestRunPartialSync_UpdatesAndPublishes(t *testing.T) {
 	for _, kind := range []string{"anime", "manga"} {
 		for _, refreshFails := range []bool{false, true} {
@@ -122,7 +122,7 @@ func testRunPartialSync(t *testing.T, kind string, refreshFails bool) {
 	}
 }
 
-// NFR-01: a partial sync preserves user-created tables / rows.
+// OFT-REQ-NFR-01: partial sync must preserve runtime-created tables and rows.
 func TestRunPartialSync_PreservesRuntimeEdits(t *testing.T) {
 	sf := NewSyncFixture(t)
 
@@ -170,7 +170,7 @@ func TestRunPartialSync_PreservesRuntimeEdits(t *testing.T) {
 	}
 }
 
-// FR-02: a full sync publishes a database with all expected tables.
+// OFT-REQ-FR-02: full-sync schema creation and output coverage.
 func TestRunFullSync_PublishesAllTables(t *testing.T) {
 	sf := NewSyncFixture(t)
 	mockFullSync(t, sf, "anime")
@@ -193,7 +193,7 @@ func TestRunFullSync_PublishesAllTables(t *testing.T) {
 	requireTitle(t, db, "anime", 1, "Test anime")
 }
 
-// FR-02: a full sync overwrites an existing database file.
+// OFT-REQ-FR-02: overwrite behavior when a full sync replaces an existing database.
 func TestRunFullSync_OverwritesExistingDatabase(t *testing.T) {
 	sf := NewSyncFixture(t)
 
