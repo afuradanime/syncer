@@ -11,6 +11,49 @@ A base de dados consiste inteiramente de informação open source. A informaçã
 ### [Modelo lógico da base de dados](./docs/02%20-%20database%20model.md)
 ### [Modelo físico da base de dados](./docs/03%20-%20physical%20database%20model.sql)
 
+## Setup
+
+### Variáveis de Ambiente
+
+O syncer utiliza as seguintes variáveis de ambiente:
+
+- `DATABASE_PATH`: Caminho para o ficheiro da base de dados SQLite
+- `TENRAI_ENDPOINT`: URL da API Tenrai (opcional, padrão: `https://tenrai.org/api`)
+
+### Ficheiro de configuração
+
+Um exemplo de ficheiro de configuração (`config.ini`) pode ser:
+
+```ini
+[Import]
+image_type=webp
+
+use_quality_filtering=true
+quality_tiers=3
+
+blacklisted_tags=hentai
+blacklisted_types=Music,Unknown
+blacklisted_studios=Studio Ghibli
+blacklisted_producers=Toei Animation
+
+request_timeout=30
+max_attempts=3
+base_backoff=5
+sleep_amount=5
+```
+
+### Execução
+
+Usar Makefile para executar as tarefas do syncer ou executar diretamente o binário gerado com as seguintes opções:
+
+```bash
+Usage of ./bin/syncer:
+  -config string
+        Path to the config file (default "config.ini")
+  -mode string
+        Mode to run the program as (default "full")
+```
+
 ## Targets
 1. **build**: Buildar a app
 2. **run-full**: Corre o syncer para inserir todos os animes e mangas
