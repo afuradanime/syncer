@@ -75,7 +75,7 @@ def test002_syncer_partial_sync_plan(
     with closing(sqlite3.connect(database_path)) as db:
         with db:
             db.execute("UPDATE anime SET title = 'Stale active anime' WHERE id = 2")
-            db.execute("UPDATE mangas SET title = 'User-edited manga' WHERE id = 1")
+            db.execute("UPDATE manga SET title = 'User-edited manga' WHERE id = 1")
             db.execute("DELETE FROM anime WHERE id = 51")
 
     result = syncer_helper.run_mode(
@@ -86,8 +86,8 @@ def test002_syncer_partial_sync_plan(
     syncer_helper.assert_database_populated(database_path)
     syncer_helper.assert_entity_present(database_path, "anime", 2, title="Mock Anime Two")
     syncer_helper.assert_entity_present(database_path, "anime", 51, title="Mock Anime 51")
-    syncer_helper.assert_entity_present(database_path, "mangas", 1, title="User-edited manga")
-    syncer_helper.assert_entity_present(database_path, "mangas", 51, title="Mock Manga 51")
+    syncer_helper.assert_entity_present(database_path, "manga", 1, title="User-edited manga")
+    syncer_helper.assert_entity_present(database_path, "manga", 51, title="Mock Manga 51")
 
 
 @pytest.mark.system
@@ -119,7 +119,7 @@ def test003_syncer_full_sync_plan(
 
     syncer_helper.assert_database_populated(database_path)
     syncer_helper.assert_entity_present(database_path, "anime", 1, title="Mock Anime One")
-    syncer_helper.assert_entity_present(database_path, "mangas", 1, title="Mock Manga One")
+    syncer_helper.assert_entity_present(database_path, "manga", 1, title="Mock Manga One")
 
     with closing(sqlite3.connect(database_path)) as db:
         with db:

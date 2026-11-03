@@ -45,8 +45,8 @@ var animeAdapter = fetchAdapter[jikan.AnimeBase, ScrapedAnime]{
 
 var mangaAdapter = fetchAdapter[jikan.MangaBase, ScrapedManga]{
 	name:        "manga",
-	lastIDQuery: "SELECT id FROM mangas ORDER BY id DESC LIMIT 1",
-	activeQuery: "SELECT id FROM mangas WHERE status = 'Publishing'",
+	lastIDQuery: "SELECT id FROM manga ORDER BY id DESC LIMIT 1",
+	activeQuery: "SELECT id FROM manga WHERE status = 'Publishing'",
 	search: func(query url.Values) (searchPage[jikan.MangaBase], error) {
 		response, err := jikan.GetMangaSearch(query)
 		if err != nil {

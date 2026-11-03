@@ -61,7 +61,7 @@ func testRunPartialSync(t *testing.T, kind string, refreshFails bool) {
 	path, otherPath, table := "/v1/anime", "/v1/manga", "anime"
 	record := func(id int, title string) any { return animeRecord(id, title) }
 	if kind == "manga" {
-		path, otherPath, table = "/v1/manga", "/v1/anime", "mangas"
+		path, otherPath, table = "/v1/manga", "/v1/anime", "manga"
 		record = func(id int, title string) any { return mangaRecord(id, title) }
 	}
 
@@ -186,7 +186,7 @@ func TestRunFullSync_PublishesAllTables(t *testing.T) {
 
 	for _, table := range []string{
 		"anime", "anime_type", "anime_status", "tags", "anime_tags",
-		"mangas", "manga_relations",
+		"manga", "manga_relations",
 	} {
 		t.Run(table, func(t *testing.T) { requireTable(t, db, table) })
 	}
@@ -236,7 +236,7 @@ func mockFullSync(t *testing.T, sf *SyncFixture, kind string) {
 	if kind == "anime" {
 		anime = append(anime, animeRecord(1, "Test anime"))
 	} else {
-		manga = append(manga, mangaRecord(1, "Test mangas"))
+		manga = append(manga, mangaRecord(1, "Test manga"))
 	}
 	sf.API.ExpectGET("/v1/anime", searchQuery(1), mock.JikanResponse{Body: map[string]any{
 		"data":       anime,

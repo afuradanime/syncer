@@ -70,13 +70,13 @@ func (p *Persister) InsertScrapedManga(ctx context.Context, item scrape.ScrapedM
 
 func (p *Persister) insertMangaRow(tx *sql.Tx, manga jikan.MangaBase) error {
 	_, err := tx.Exec(`
-		INSERT OR REPLACE INTO mangas
-			(id, title, title_english, title_japanese, kind, status,
+		INSERT OR REPLACE INTO manga
+			(id, title, kind, status,
 			 num_chapters, num_volumes, start_date, end_date,
 			 cover_url_small, cover_url_large)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-	`, manga.MalId, manga.Title, nullIfEmpty(manga.TitleEnglish), nullIfEmpty(manga.TitleJapanese),
-		manga.Type, manga.Status, nullIfZero(manga.Chapters), nullIfZero(manga.Volumes),
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+	`, manga.MalId, manga.Title, manga.Type, manga.Status,
+		nullIfZero(manga.Chapters), nullIfZero(manga.Volumes),
 		nullDate(manga.Published.From.Time), nullDate(manga.Published.To.Time),
 		nullIfEmpty(manga.Images.Webp.SmallImageUrl), nullIfEmpty(manga.Images.Webp.LargeImageUrl))
 	if err != nil {
@@ -322,7 +322,7 @@ func (p *Persister) insertDescription(tx *sql.Tx, anime jikan.AnimeBase) error {
 }
 
 func (p *Persister) insertSynonyms(tx *sql.Tx, anime jikan.AnimeBase) error {
-	if _, err := tx.Exec(`DELETE FROM synonyms WHERE anime_id = ?`, anime.MalId); err != nil {
+	if _, err := tx.Exec(`DELETE FROM anime_synonyms WHERE anime_id = ?`, anime.MalId); err != nil {
 		return fmt.Errorf("clear synonyms for anime %d: %w", anime.MalId, err)
 	}
 
@@ -346,7 +346,7 @@ func (p *Persister) insertSynonyms(tx *sql.Tx, anime jikan.AnimeBase) error {
 
 	for _, s := range synonyms {
 		if _, err := tx.Exec(`
-			INSERT INTO synonyms (anime_id, type, title) VALUES (?, ?, ?)
+			INSERT INTO anime_synonyms (anime_id, type, title) VALUES (?, ?, ?)
 		`, anime.MalId, s.typ, s.title); err != nil {
 			return fmt.Errorf("insert synonym for anime %d: %w", anime.MalId, err)
 		}

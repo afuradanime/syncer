@@ -80,7 +80,7 @@ CREATE TABLE anime (
     FOREIGN KEY (status_id) REFERENCES anime_status(id)
 );
 
-CREATE TABLE synonyms (
+CREATE TABLE anime_synonyms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     anime_id INTEGER NOT NULL,
     type TEXT NOT NULL,  -- 'Default', 'Japanese', 'English', 'Synonym'
@@ -136,12 +136,9 @@ CREATE TABLE anime_relations (
 );
 
 
-CREATE TABLE mangas (
+CREATE TABLE manga (
     id              int PRIMARY KEY,
     title           varchar NOT NULL,
-    title_english   varchar,
-    title_japanese  varchar,
-    synopsis        text,
     kind            varchar(25) NOT NULL,
     status          varchar(25) NOT NULL,
     num_chapters    int,
@@ -153,20 +150,20 @@ CREATE TABLE mangas (
 );
 
 CREATE TABLE manga_synonyms (
-    id       INTEGER PRIMARY KEY AUTOINCREMENT,
-    manga_id int         NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    manga_id int         NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
     type     varchar(25) NOT NULL,
     title    varchar(255) NOT NULL,
     UNIQUE (manga_id, type, title)
 );
 
 CREATE TABLE manga_descriptions (
-    manga_id    int PRIMARY KEY REFERENCES mangas(id) ON DELETE CASCADE,
+    manga_id    int PRIMARY KEY REFERENCES manga(id) ON DELETE CASCADE,
     description text NOT NULL
 );
 
 CREATE TABLE manga_tags (
-    manga_id int NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
+    manga_id int NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
     tag_id   int NOT NULL REFERENCES tags(id)        ON DELETE CASCADE,
     PRIMARY KEY (manga_id, tag_id)
 );
@@ -179,15 +176,15 @@ CREATE TABLE people (
 );
 
 CREATE TABLE manga_authors (
-    manga_id  int NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
+    manga_id  int NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
     person_id int NOT NULL REFERENCES people(mal_id) ON DELETE CASCADE,
     role      varchar(25) NOT NULL,  -- 'Story', 'Art', 'Story & Art'
     PRIMARY KEY (manga_id, person_id, role)
 );
 
 CREATE TABLE manga_relations (
-    manga_id         int NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
-    related_manga_id int NOT NULL REFERENCES mangas(id) ON DELETE CASCADE,
+    manga_id         int NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
+    related_manga_id int NOT NULL REFERENCES manga(id) ON DELETE CASCADE,
     relation_type    varchar(25) NOT NULL,
     PRIMARY KEY (manga_id, related_manga_id, relation_type)
 );
@@ -203,8 +200,8 @@ CREATE INDEX idx_anime_airing ON anime(airing) WHERE airing = 1;
 -- Index for title searching
 CREATE INDEX idx_anime_title ON anime(title COLLATE NOCASE);
 -- Index for looking up anime by any title variant
-CREATE INDEX idx_synonyms_title ON synonyms(title COLLATE NOCASE);
-CREATE INDEX idx_synonyms_anime_id ON synonyms(anime_id);
+CREATE INDEX idx_anime_synonyms_title ON anime_synonyms(title COLLATE NOCASE);
+CREATE INDEX idx_anime_synonyms_anime_id ON anime_synonyms(anime_id);
 -- Index for finding anime by genre
 CREATE INDEX idx_anime_tags_tag_id ON anime_tags(tag_id);
 -- Index for getting all tags of an anime

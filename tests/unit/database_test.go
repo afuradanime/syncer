@@ -89,7 +89,7 @@ func TestCreateDatabaseSchema_CreatesExpectedTables(t *testing.T) {
 		"anime_status",
 		"tags",
 		"anime_tags",
-		"mangas",
+		"manga",
 		"manga_tags",
 		"manga_relations",
 		"manga_synonyms",

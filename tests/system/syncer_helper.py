@@ -59,7 +59,7 @@ CORE_TABLES = frozenset({
     "anime_status",
     "tags",
     "anime_tags",
-    "mangas",
+    "manga",
     "manga_relations",
 })
 
@@ -156,7 +156,7 @@ def assert_database_populated(
     if require_anime:
         assert_table_not_empty(path, "anime")
     if require_manga:
-        assert_table_not_empty(path, "mangas")
+        assert_table_not_empty(path, "manga")
 
     if check_manifest:
         validate_manifest(str(path), f"{path}.manifest.json")

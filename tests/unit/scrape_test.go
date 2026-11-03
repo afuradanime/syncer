@@ -69,8 +69,8 @@ func TestScrapePartial_RefreshesThenResumes(t *testing.T) {
 				}
 			} else {
 				if _, err := db.Exec(`
-					CREATE TABLE mangas (id INTEGER, status TEXT);
-					INSERT INTO mangas VALUES (1, 'Publishing');
+					CREATE TABLE manga (id INTEGER, status TEXT);
+					INSERT INTO manga VALUES (1, 'Publishing');
 				`); err != nil {
 					t.Fatal(err)
 				}
