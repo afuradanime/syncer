@@ -70,7 +70,7 @@ lint:
 	@$(STATICCHECK) ./...
 
 .PHONY: check
-check: fmt vet lint test
+check: fmt vet lint test test-race test-system
 
 .PHONY: tidy
 tidy:
