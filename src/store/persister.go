@@ -168,10 +168,10 @@ func (p *Persister) insertMangaTags(tx *sql.Tx, manga jikan.MangaBase) error {
 		items   []jikan.MalItem
 		tagType string
 	}{
-		{manga.Genres, "genre"},
-		{manga.ExplicitGenres, "explicit_genre"},
-		{manga.Themes, "theme"},
-		{manga.Demographics, "demographic"},
+		{manga.Genres, tagGenre},
+		{manga.ExplicitGenres, tagExplicitGenre},
+		{manga.Themes, tagTheme},
+		{manga.Demographics, tagDemographic},
 	}
 
 	for _, group := range groups {
@@ -269,8 +269,9 @@ func (p *Persister) InsertScrapedAnime(ctx context.Context, item scrape.ScrapedA
 
 func (p *Persister) insertAnimeRow(tx *sql.Tx, anime jikan.AnimeBase) error {
 
-	typeID := p.lookups.AnimeTypeID(anime.Type)
-	statusID := p.lookups.AnimeStatusID(anime.Status)
+	typeID := slugIDOrNil("type", anime.MalId, anime.Type, animeTypeSlugs, p.lookups.AnimeTypeID)
+	statusID := slugIDOrNil("status", anime.MalId, anime.Status, animeStatusSlugs, p.lookups.AnimeStatusID)
+	source := slugOrNil("source", anime.MalId, anime.Source, animeSourceSlugs)
 	quality := CalculateQualityScore(anime.Score, p.opts)
 
 	_, err := tx.Exec(`
@@ -281,7 +282,7 @@ func (p *Persister) insertAnimeRow(tx *sql.Tx, anime jikan.AnimeBase) error {
 			 image_url, small_image_url, large_image_url, trailer_embed_url)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 	`,
-		anime.MalId, nullIfEmpty(anime.Url), anime.Title, typeID, nullIfEmpty(anime.Source),
+		anime.MalId, nullIfEmpty(anime.Url), anime.Title, typeID, source,
 		nullIfZero(anime.Episodes), statusID, anime.Airing,
 		nullIfEmpty(anime.Duration), quality,
 		nullDate(anime.Aired.From.Time), nullDate(anime.Aired.To.Time),
@@ -333,14 +334,14 @@ func (p *Persister) insertSynonyms(tx *sql.Tx, anime jikan.AnimeBase) error {
 
 	var synonyms []synonym
 	if anime.TitleEnglish != "" && anime.TitleEnglish != anime.Title {
-		synonyms = append(synonyms, synonym{"English", anime.TitleEnglish})
+		synonyms = append(synonyms, synonym{synonymEnglish, anime.TitleEnglish})
 	}
 	if anime.TitleJapanese != "" && anime.TitleJapanese != anime.Title {
-		synonyms = append(synonyms, synonym{"Japanese", anime.TitleJapanese})
+		synonyms = append(synonyms, synonym{synonymJapanese, anime.TitleJapanese})
 	}
 	for _, s := range anime.TitleSynonyms {
 		if s != "" && s != anime.Title {
-			synonyms = append(synonyms, synonym{"Synonym", s})
+			synonyms = append(synonyms, synonym{synonymOther, s})
 		}
 	}
 
@@ -360,9 +361,9 @@ func (p *Persister) insertCompanies(tx *sql.Tx, anime jikan.AnimeBase) error {
 		items []jikan.MalItem
 		role  string
 	}{
-		{anime.Producers, "Producer"},
-		{anime.Licensors, "Licensor"},
-		{anime.Studios, "Studio"},
+		{anime.Producers, companyRoleProducer},
+		{anime.Licensors, companyRoleLicensor},
+		{anime.Studios, companyRoleStudio},
 	}
 
 	for _, g := range groups {
@@ -400,10 +401,10 @@ func (p *Persister) insertTags(tx *sql.Tx, anime jikan.AnimeBase) error {
 		items   []jikan.MalItem
 		tagType string
 	}{
-		{anime.Genres, "genre"},
-		{anime.ExplicitGenres, "explicit_genre"},
-		{anime.Themes, "theme"},
-		{anime.Demographics, "demographic"},
+		{anime.Genres, tagGenre},
+		{anime.ExplicitGenres, tagExplicitGenre},
+		{anime.Themes, tagTheme},
+		{anime.Demographics, tagDemographic},
 	}
 
 	for _, g := range groups {
@@ -437,9 +438,15 @@ func (p *Persister) insertRelations(tx *sql.Tx, animeID int, relations jikan.Ani
 	}
 
 	for _, rel := range relations.Data {
-		relationTypeID, ok := p.lookups.RelationTypeID(rel.Relation)
+		// relation_type_id is part of the primary key, so unrecognised relations are skipped, not stored as NULL
+		relationSlug, ok := relationTypeSlugs[rel.Relation]
 		if !ok {
-			fmt.Printf("[Persister] Unknown relation type %q on anime %d, skipping\n", rel.Relation, animeID)
+			fmt.Printf("[Persister] Unknown relation type %q on anime %d, skipping (add it to src/store/slugs.go)\n", rel.Relation, animeID)
+			continue
+		}
+		relationTypeID, ok := p.lookups.RelationTypeID(relationSlug)
+		if !ok {
+			fmt.Printf("[Persister] Relation type %q has no row in relation_types, skipping\n", relationSlug)
 			continue
 		}
 
