@@ -58,18 +58,16 @@ func loadLookupTable(db *sql.DB, table string, dst map[string]int) error {
 	return rows.Err()
 }
 
-func (l *Lookups) AnimeTypeID(name string) int {
-	if id, ok := l.animeTypeIDs[name]; ok {
-		return id
-	}
-	return l.animeTypeIDs["Unknown"]
+// The lookup tables are keyed by slug (see slugs.go).
+
+func (l *Lookups) AnimeTypeID(slug string) (int, bool) {
+	id, ok := l.animeTypeIDs[slug]
+	return id, ok
 }
 
-func (l *Lookups) AnimeStatusID(name string) int {
-	if id, ok := l.animeStatusIDs[name]; ok {
-		return id
-	}
-	return l.animeStatusIDs["Unknown"]
+func (l *Lookups) AnimeStatusID(slug string) (int, bool) {
+	id, ok := l.animeStatusIDs[slug]
+	return id, ok
 }
 
 func (l *Lookups) CompanyTypeID(role string) (int, bool) {
