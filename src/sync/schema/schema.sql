@@ -63,7 +63,7 @@ CREATE TABLE anime (
     status_id INTEGER NOT NULL,
     airing BOOLEAN DEFAULT 0,
     duration TEXT,
-    quality_score BOOLEAN DEFAULT 0,
+    quality_score INTEGER DEFAULT 0,
     start_date DATETIME,
     end_date DATETIME,
     season TEXT,

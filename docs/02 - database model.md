@@ -26,7 +26,7 @@ erDiagram
         integer status_id FK
         boolean airing
         text duration
-        boolean quality_score
+        integer quality_score
         datetime start_date
         datetime end_date
         text season
