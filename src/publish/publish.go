@@ -7,6 +7,8 @@ import (
 )
 
 func PublishDatabase(tempPath, destPath string, version string) error {
+	// [[impl~partial-sync-replace-database~1 -> req~partial-sync-replace-db~1]]
+	// [[impl~full-sync-replace-database~1 -> req~full-sync-replace-db~1]]
 
 	manifest, err := CreateManifest(tempPath, version)
 	if err != nil {
@@ -45,6 +47,7 @@ func PublishDatabase(tempPath, destPath string, version string) error {
 }
 
 func SetupDatabasePragmas(db *sql.DB) error {
+	// [[impl~database-pragmas~1 -> req~db-writable-tuned~1]]
 	// Enable foreign key constraints
 	if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 		return fmt.Errorf("failed to enable foreign keys: %w", err)

@@ -14,7 +14,9 @@ const DEFAULT_CONFIG_PATH = "config.ini"
 
 func main() {
 
+	// [[impl~sync-mode-flag~1 -> req~config-sync-strategy-flag~1]]
 	executionMode := flag.String("mode", DEFAULT_EXECUTION_MODE, "Mode to run the program as")
+	// [[impl~config-file-flag~1 -> req~config-import-rules-file~1]]
 	configPath := flag.String("config", DEFAULT_CONFIG_PATH, "Path to the config file")
 
 	flag.Parse()

@@ -15,6 +15,7 @@ import (
 var initMigrationSQL string
 
 func CreateTempDatabase(destination string) (string, error) {
+	// [[impl~database-temp-path~1 -> req~db-write-to-temp-path~1]]
 	dir := filepath.Dir(destination)
 	base := filepath.Base(destination)
 

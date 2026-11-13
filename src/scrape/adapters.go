@@ -19,6 +19,7 @@ type fetchAdapter[T, Result any] struct {
 var animeAdapter = fetchAdapter[jikan.AnimeBase, ScrapedAnime]{
 	name:        "anime",
 	lastIDQuery: "SELECT id FROM anime ORDER BY id DESC LIMIT 1",
+	// [[impl~partial-sync-airing-anime~1 -> req~partial-sync-update-airing~1]]
 	activeQuery: "SELECT id FROM anime WHERE airing = 1",
 	search: func(query url.Values) (searchPage[jikan.AnimeBase], error) {
 		response, err := jikan.GetAnimeSearch(query)
