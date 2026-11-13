@@ -3,14 +3,14 @@ CREATE TABLE anime_type (
     name TEXT UNIQUE NOT NULL
 );
 
+-- Names are kebab-case slugs (see src/store/slugs.go); an unknown type is stored as NULL in anime.type_id
 INSERT INTO anime_type (name) VALUES
-    ('TV'),
-    ('OVA'),
-    ('Movie'),
-    ('Special'),
-    ('ONA'),
-    ('Music'),
-    ('Unknown');
+    ('tv'),
+    ('ova'),
+    ('movie'),
+    ('special'),
+    ('ona'),
+    ('music');
 
 CREATE TABLE company_type (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -18,9 +18,9 @@ CREATE TABLE company_type (
 );
 
 INSERT INTO company_type (name) VALUES
-    ('Producer'),
-    ('Licensor'),
-    ('Studio');
+    ('producer'),
+    ('licensor'),
+    ('studio');
 
 
 CREATE TABLE anime_status (
@@ -28,39 +28,39 @@ CREATE TABLE anime_status (
     name TEXT UNIQUE NOT NULL
 );
 
-INSERT INTO anime_status (name) VALUES 
-    ('Finished Airing'),
-    ('Currently Airing'),
-    ('Not yet aired'),
-    ('Unknown');
+-- An unknown status is stored as NULL in anime.status_id
+INSERT INTO anime_status (name) VALUES
+    ('finished-airing'),
+    ('currently-airing'),
+    ('not-yet-aired');
 
 CREATE TABLE relation_types (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name TEXT UNIQUE NOT NULL  -- 'prequel', 'sequel', 'side story', 'parent story', 'summary', 'alternative version', 'alternative setting', 'spin-off', 'other'
+    name TEXT UNIQUE NOT NULL
 );
 
 INSERT INTO relation_types (name) VALUES
-    ('Parent Story'),
-    ('Sequel'),
-    ('Character'),
-    ('Other'),
-    ('Spin-Off'),
-    ('Summary'),
-    ('Adaptation'),
-    ('Alternative Version'),
-    ('Side Story'),
-    ('Full Story'),
-    ('Alternative Setting'),
-    ('Prequel');
+    ('parent-story'),
+    ('sequel'),
+    ('character'),
+    ('other'),
+    ('spin-off'),
+    ('summary'),
+    ('adaptation'),
+    ('alternative-version'),
+    ('side-story'),
+    ('full-story'),
+    ('alternative-setting'),
+    ('prequel');
 
 CREATE TABLE anime (
     id INTEGER PRIMARY KEY,  -- MAL ID
     url TEXT,
     title TEXT NOT NULL,
-    type_id INTEGER NOT NULL,
-    source TEXT,
+    type_id INTEGER,  -- NULL when unknown
+    source TEXT,  -- kebab-case slug, NULL when unknown
     episodes INTEGER,
-    status_id INTEGER NOT NULL,
+    status_id INTEGER,  -- NULL when unknown
     airing BOOLEAN DEFAULT 0,
     duration TEXT,
     quality_score INTEGER DEFAULT 0,
@@ -83,7 +83,7 @@ CREATE TABLE anime (
 CREATE TABLE anime_synonyms (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     anime_id INTEGER NOT NULL,
-    type TEXT NOT NULL,  -- 'Default', 'Japanese', 'English', 'Synonym'
+    type TEXT NOT NULL,  -- 'english', 'japanese', 'synonym'
     title TEXT NOT NULL,
     FOREIGN KEY (anime_id) REFERENCES anime(id) ON DELETE CASCADE
 );
@@ -106,14 +106,14 @@ CREATE TABLE companies (
 CREATE TABLE anime_companies (
     anime_id   int NOT NULL REFERENCES anime(id)         ON DELETE CASCADE,
     company_id int NOT NULL REFERENCES companies(mal_id) ON DELETE CASCADE,
-    role       varchar(25) NOT NULL,
+    role       varchar(25) NOT NULL,  -- 'producer', 'licensor', 'studio'
     PRIMARY KEY (anime_id, company_id, role)
 );
 
 CREATE TABLE tags (
     id INTEGER PRIMARY KEY,  -- MAL ID
     name TEXT UNIQUE NOT NULL,
-    type TEXT NOT NULL,  -- 'genre', 'theme', 'demographic', 'explicit_genre'
+    type TEXT NOT NULL,  -- 'genre', 'theme', 'demographic', 'explicit-genre'
     url TEXT
 );
 
