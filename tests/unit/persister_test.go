@@ -1,26 +1,28 @@
 package tests
 
 import (
-	"context"
-	"database/sql"
 	"encoding/json"
 	"testing"
 
-	"syncer/src/config"
 	"syncer/src/scrape"
-	"syncer/src/store"
 
 	jikan "github.com/afuradanime/tenrai-go"
 )
 
-// MyAnimeList's display text is stored as kebab-case slugs.
+// Tests whether the persister uses the correct map for each column and
+// if the fields are correctly stored as their slug counterparts in DB.
 func TestPersister_StoresSlugs(t *testing.T) {
 	f := NewDBFixture(t)
 
+	jsonRelationFromTenrai := `{"data": [
+		{
+			"relation": "Spin-Off", 
+			"entry": [{"mal_id": 2, "type": "anime", "name": "Other anime"}]}
+	]}`
+
 	var relations jikan.AnimeRelations
-	if err := json.Unmarshal([]byte(`{"data": [
-		{"relation": "Spin-Off", "entry": [{"mal_id": 2, "type": "anime", "name": "Other anime"}]}
-	]}`), &relations); err != nil {
+
+	if err := json.Unmarshal([]byte(jsonRelationFromTenrai), &relations); err != nil {
 		t.Fatal(err)
 	}
 
@@ -64,29 +66,4 @@ func TestPersister_StoresUnknownValuesAsNull(t *testing.T) {
 	)
 
 	requireCount(t, f.DB, `SELECT COUNT(*) FROM anime WHERE type_id IS NULL AND status_id IS NULL AND source IS NULL`, 3)
-}
-
-func insertScrapedAnime(t *testing.T, db *sql.DB, items ...scrape.ScrapedAnime) {
-	t.Helper()
-	lookups, err := store.LoadLookups(db)
-	if err != nil {
-		t.Fatalf("load lookups: %v", err)
-	}
-	p := store.NewPersister(db, lookups, config.Config{})
-	for _, item := range items {
-		if err := p.InsertScrapedAnime(context.Background(), item); err != nil {
-			t.Fatalf("insert anime %d: %v", item.Anime.MalId, err)
-		}
-	}
-}
-
-func requireString(t *testing.T, db *sql.DB, query string, want string) {
-	t.Helper()
-	var got string
-	if err := db.QueryRow(query).Scan(&got); err != nil {
-		t.Fatalf("query %q: %v", query, err)
-	}
-	if got != want {
-		t.Fatalf("%q = %q, want %q", query, got, want)
-	}
 }

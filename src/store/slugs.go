@@ -2,13 +2,15 @@ package store
 
 import "fmt"
 
-// MyAnimeList (through tenrai-go) sends these fields as display text ("TV",
-// "Finished Airing", "4-koma manga"). They are stored as kebab-case slugs instead,
-// so the database, the backend and its API all use the same stable values, and
-// only the frontend turns them into display text.
-//
-// A value that isn't listed here is stored as NULL. "Unknown" and empty values
-// are expected; anything else is logged so it can be added to the right map.
+/*
+* MyAnimeList (through tenrai-go) sends these fields as display text ("TV",
+* "Finished Airing", "4-koma manga"). They should be stored as kebab-case slugs
+* instead, so the db, the backend and its API all use the same stable values, and
+* the responsibility to turn them into display text is delegated to the frontend.
+*
+* A value that isn't listed here is stored as NULL. "Unknown" and empty values
+* are also expected and anything else is logged so it can be added later.
+ */
 
 var animeTypeSlugs = map[string]string{
 	"TV":      "tv",

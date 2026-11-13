@@ -221,3 +221,29 @@ func countRequestsByPath(requests []*http.Request, basePath string) (pages, refr
 	}
 	return
 }
+
+// insertScrapedAnime stores items through the real persister.
+func insertScrapedAnime(t *testing.T, db *sql.DB, items ...scrape.ScrapedAnime) {
+	t.Helper()
+	lookups, err := store.LoadLookups(db)
+	if err != nil {
+		t.Fatalf("load lookups: %v", err)
+	}
+	p := store.NewPersister(db, lookups, config.Config{})
+	for _, item := range items {
+		if err := p.InsertScrapedAnime(context.Background(), item); err != nil {
+			t.Fatalf("insert anime %d: %v", item.Anime.MalId, err)
+		}
+	}
+}
+
+func requireString(t *testing.T, db *sql.DB, query string, want string) {
+	t.Helper()
+	var got string
+	if err := db.QueryRow(query).Scan(&got); err != nil {
+		t.Fatalf("query %q: %v", query, err)
+	}
+	if got != want {
+		t.Fatalf("%q = %q, want %q", query, got, want)
+	}
+}
