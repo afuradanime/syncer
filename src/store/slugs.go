@@ -12,7 +12,7 @@ import "fmt"
 * are also expected and anything else is logged so it can be added later.
  */
 
-var animeTypeSlugs = map[string]string{
+var AnimeTypeSlugs = map[string]string{
 	"TV":      "tv",
 	"OVA":     "ova",
 	"Movie":   "movie",
@@ -21,13 +21,13 @@ var animeTypeSlugs = map[string]string{
 	"Music":   "music",
 }
 
-var animeStatusSlugs = map[string]string{
+var AnimeStatusSlugs = map[string]string{
 	"Finished Airing":  "finished-airing",
 	"Currently Airing": "currently-airing",
 	"Not yet aired":    "not-yet-aired",
 }
 
-var animeSourceSlugs = map[string]string{
+var AnimeSourceSlugs = map[string]string{
 	"Original":     "original",
 	"Manga":        "manga",
 	"4-koma manga": "4-koma-manga",
@@ -46,7 +46,7 @@ var animeSourceSlugs = map[string]string{
 	"Other":        "other",
 }
 
-var relationTypeSlugs = map[string]string{
+var RelationTypeSlugs = map[string]string{
 	"Parent Story":        "parent-story",
 	"Sequel":              "sequel",
 	"Prequel":             "prequel",
@@ -63,18 +63,18 @@ var relationTypeSlugs = map[string]string{
 
 // Values the syncer assigns itself rather than reading from MyAnimeList.
 const (
-	companyRoleProducer = "producer"
-	companyRoleLicensor = "licensor"
-	companyRoleStudio   = "studio"
+	CompanyRoleProducer = "producer"
+	CompanyRoleLicensor = "licensor"
+	CompanyRoleStudio   = "studio"
 
-	synonymEnglish  = "english"
-	synonymJapanese = "japanese"
-	synonymOther    = "synonym"
+	SynonymEnglish  = "english"
+	SynonymJapanese = "japanese"
+	SynonymOther    = "synonym"
 
-	tagGenre         = "genre"
-	tagExplicitGenre = "explicit-genre"
-	tagTheme         = "theme"
-	tagDemographic   = "demographic"
+	TagGenre         = "genre"
+	TagExplicitGenre = "explicit-genre"
+	TagTheme         = "theme"
+	TagDemographic   = "demographic"
 )
 
 // toSlug returns the slug for a MyAnimeList value, or false if it has none.

@@ -168,10 +168,10 @@ func (p *Persister) insertMangaTags(tx *sql.Tx, manga jikan.MangaBase) error {
 		items   []jikan.MalItem
 		tagType string
 	}{
-		{manga.Genres, tagGenre},
-		{manga.ExplicitGenres, tagExplicitGenre},
-		{manga.Themes, tagTheme},
-		{manga.Demographics, tagDemographic},
+		{manga.Genres, TagGenre},
+		{manga.ExplicitGenres, TagExplicitGenre},
+		{manga.Themes, TagTheme},
+		{manga.Demographics, TagDemographic},
 	}
 
 	for _, group := range groups {
@@ -269,9 +269,9 @@ func (p *Persister) InsertScrapedAnime(ctx context.Context, item scrape.ScrapedA
 
 func (p *Persister) insertAnimeRow(tx *sql.Tx, anime jikan.AnimeBase) error {
 
-	typeID := slugIDOrNil("type", anime.MalId, anime.Type, animeTypeSlugs, p.lookups.AnimeTypeID)
-	statusID := slugIDOrNil("status", anime.MalId, anime.Status, animeStatusSlugs, p.lookups.AnimeStatusID)
-	source := slugOrNil("source", anime.MalId, anime.Source, animeSourceSlugs)
+	typeID := slugIDOrNil("type", anime.MalId, anime.Type, AnimeTypeSlugs, p.lookups.AnimeTypeID)
+	statusID := slugIDOrNil("status", anime.MalId, anime.Status, AnimeStatusSlugs, p.lookups.AnimeStatusID)
+	source := slugOrNil("source", anime.MalId, anime.Source, AnimeSourceSlugs)
 	quality := CalculateQualityScore(anime.Score, p.opts)
 
 	_, err := tx.Exec(`
@@ -334,14 +334,14 @@ func (p *Persister) insertSynonyms(tx *sql.Tx, anime jikan.AnimeBase) error {
 
 	var synonyms []synonym
 	if anime.TitleEnglish != "" && anime.TitleEnglish != anime.Title {
-		synonyms = append(synonyms, synonym{synonymEnglish, anime.TitleEnglish})
+		synonyms = append(synonyms, synonym{SynonymEnglish, anime.TitleEnglish})
 	}
 	if anime.TitleJapanese != "" && anime.TitleJapanese != anime.Title {
-		synonyms = append(synonyms, synonym{synonymJapanese, anime.TitleJapanese})
+		synonyms = append(synonyms, synonym{SynonymJapanese, anime.TitleJapanese})
 	}
 	for _, s := range anime.TitleSynonyms {
 		if s != "" && s != anime.Title {
-			synonyms = append(synonyms, synonym{synonymOther, s})
+			synonyms = append(synonyms, synonym{SynonymOther, s})
 		}
 	}
 
@@ -361,9 +361,9 @@ func (p *Persister) insertCompanies(tx *sql.Tx, anime jikan.AnimeBase) error {
 		items []jikan.MalItem
 		role  string
 	}{
-		{anime.Producers, companyRoleProducer},
-		{anime.Licensors, companyRoleLicensor},
-		{anime.Studios, companyRoleStudio},
+		{anime.Producers, CompanyRoleProducer},
+		{anime.Licensors, CompanyRoleLicensor},
+		{anime.Studios, CompanyRoleStudio},
 	}
 
 	for _, g := range groups {
@@ -401,10 +401,10 @@ func (p *Persister) insertTags(tx *sql.Tx, anime jikan.AnimeBase) error {
 		items   []jikan.MalItem
 		tagType string
 	}{
-		{anime.Genres, tagGenre},
-		{anime.ExplicitGenres, tagExplicitGenre},
-		{anime.Themes, tagTheme},
-		{anime.Demographics, tagDemographic},
+		{anime.Genres, TagGenre},
+		{anime.ExplicitGenres, TagExplicitGenre},
+		{anime.Themes, TagTheme},
+		{anime.Demographics, TagDemographic},
 	}
 
 	for _, g := range groups {
@@ -439,7 +439,7 @@ func (p *Persister) insertRelations(tx *sql.Tx, animeID int, relations jikan.Ani
 
 	for _, rel := range relations.Data {
 		// relation_type_id is part of the primary key, so unrecognised relations are skipped, not stored as NULL
-		relationSlug, ok := relationTypeSlugs[rel.Relation]
+		relationSlug, ok := RelationTypeSlugs[rel.Relation]
 		if !ok {
 			fmt.Printf("[Persister] Unknown relation type %q on anime %d, skipping (add it to src/store/slugs.go)\n", rel.Relation, animeID)
 			continue
