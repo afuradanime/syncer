@@ -46,6 +46,8 @@ func wait(ctx context.Context, duration time.Duration) error {
 }
 
 func fetchWithRetry[T any](ctx context.Context, cfg config.Config, fetch func() (T, error)) (T, error) {
+	// [[impl~fetch-retry~1 -> req~fetch-retry~1]]
+	// [[impl~fetch-rate-limit~1 -> req~fetch-rate-limit~1]]
 	var zero T
 	backoff := cfg.BaseBackoff
 	for attempt := 1; attempt <= cfg.MaxAttempts; attempt++ {
@@ -160,6 +162,7 @@ func findPage[T, Result any](ctx context.Context, malID int, cfg config.Config, 
 }
 
 func scrapePartial[T, Result any](ctx context.Context, results chan<- Result, cfg config.Config, db *sql.DB, adapter fetchAdapter[T, Result]) error {
+	// [[impl~partial-sync-new-items~1 -> req~partial-sync-insert-new~1]]
 	defer close(results)
 	var lastMalID int
 	if err := db.QueryRowContext(ctx, adapter.lastIDQuery).Scan(&lastMalID); err != nil && err != sql.ErrNoRows {

@@ -19,6 +19,7 @@ type Syncer struct {
 
 func (s *Syncer) RunPartialSync() error {
 
+	// [[impl~partial-sync-requires-db~1 -> req~partial-sync-abort-no-db~1]]
 	_, err := os.Stat(s.Config.DbPath)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -202,6 +203,7 @@ func processMangaQueue(results <-chan scrape.ScrapedManga, wg *gosync.WaitGroup,
 
 func (s *Syncer) RunFullSync() error {
 
+	// [[impl~full-sync-new-database~1 -> req~full-sync-new-db-file~1]]
 	// Create a temporary database
 	tempDbPath, err := CreateTempDatabase(s.Config.DbPath)
 	if err != nil {

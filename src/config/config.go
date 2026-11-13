@@ -73,6 +73,7 @@ func LoadConfig(path string) (Config, error) {
 		return Config{}, fmt.Errorf("load config: %w", err)
 	}
 
+	// [[impl~database-path-env~1 -> req~config-database-path-env~1]]
 	dbPath := os.Getenv("DATABASE_PATH")
 	if dbPath == "" {
 		return Config{}, fmt.Errorf("DATABASE_PATH environment variable is not set")

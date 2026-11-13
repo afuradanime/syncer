@@ -22,6 +22,7 @@ type Manifest struct {
 }
 
 func CalculateChecksum(dbPath, version string) (*string, error) {
+	// [[impl~manifest-checksum~1 -> req~manifest-checksum~1]]
 
 	dbFile, err := os.Open(dbPath)
 	if err != nil {
@@ -37,6 +38,8 @@ func CalculateChecksum(dbPath, version string) (*string, error) {
 }
 
 func CreateManifest(dbPath, version string) (*Manifest, error) {
+	// [[impl~manifest-version~1 -> req~manifest-version~1]]
+	// [[impl~manifest-size~1 -> req~manifest-size~1]]
 	stat, err := os.Stat(dbPath)
 	if err != nil {
 		return nil, fmt.Errorf("failed to stat db file: %w", err)

@@ -26,6 +26,8 @@ help:
 	@echo "  check              Run formatting, vet, lint and tests"
 	@echo "  tidy               Tidy Go dependencies"
 	@echo "  clean              Remove build artifacts"
+	@echo "  trace              Trace the codebase with open fast trace"
+	@echo "  trace-report       Generate an HTML report from the trace"
 	@echo ""
 	@echo "Run targets require DATABASE_PATH; CONFIG defaults to config.ini."
 	@echo "Override test options with TEST_FLAGS (default: -v)."
@@ -79,5 +81,18 @@ tidy:
 .PHONY: clean
 clean:
 	@rm -rf "$(BIN_DIR)"
+
+# Open Fast Trace
+JAVA ?= java
+OFT ?= ./tools/openfasttrace-4.11.0.jar
+OFT_REPORT ?= trace-report.html
+
+.PHONY: trace
+trace:
+	@$(JAVA) -jar $(OFT) trace .
+
+.PHONY: trace-report
+trace-report:
+	@$(JAVA) -jar $(OFT) trace -o html -f $(OFT_REPORT) --report-verbosity all .
 
 .DEFAULT_GOAL := help
