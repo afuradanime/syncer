@@ -8,3 +8,6 @@ __pycache__/
 
 config/env/*
 !config/env/.env.template
+
+trace-report.html
+tools/openfasttrace-4.11.0.jar
